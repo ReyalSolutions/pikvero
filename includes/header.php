@@ -1,196 +1,352 @@
 <?php
 /**
- * Shared Header Partial for Guest & Public Pages
+ * Pikvero Global Fixed Header Partial
+ * Reusable across guest, marketplace, and public pages.
  */
 require_once __DIR__ . '/../app/bootstrap.php';
 
 use App\Core\Auth\Auth;
 
-$uri      = $_SERVER['REQUEST_URI'] ?? '';
-$script   = $_SERVER['SCRIPT_NAME'] ?? '';
-$cleanUri = strtok($uri, '?');
+// Calculate dynamic base URL and base path
+$reqUri    = $_SERVER['REQUEST_URI'] ?? '/';
+$script    = $_SERVER['SCRIPT_NAME'] ?? '';
+$cleanUri  = strtok($reqUri, '?');
+$basePath  = (strpos($reqUri, '/pikvero') === 0) ? '/pikvero' : '';
 
-$isOwner   = str_contains($uri, 'type=owner') || str_contains($script, 'owner-onboarding.php');
-$isPricing = str_contains($script, 'pricing.php');
-$isSearch  = str_contains($script, 'search.php') || str_contains($script, 'facility.php');
-$isOpenPlay= str_contains($script, 'open-play.php');
-$isHome    = !$isOwner && !$isPricing && !$isSearch && !$isOpenPlay && (
-              str_contains($script, 'index.php') || 
-              str_ends_with($cleanUri, '/public/') || 
-              str_ends_with($cleanUri, '/public') || 
-              str_ends_with($cleanUri, '/pikvero/') || 
-              str_ends_with($cleanUri, '/pikvero')
-            );
-
+// Authentication and user state
 $isLoggedIn = class_exists(Auth::class) ? Auth::check() : false;
-$homeLink = '/pikvero/public/index.php';
-$role = 'guest';
-if ($isLoggedIn) {
-    $role = strtolower(Auth::role() ?? 'customer');
-    if ($role === 'customer') {
-        $homeLink = '/pikvero/public/customer/dashboard.php';
-    } elseif ($role === 'court_owner') {
-        $homeLink = '/pikvero/public/owner/dashboard.php';
-    }
+$userRole   = $isLoggedIn ? (Auth::role() ?? 'customer') : 'guest';
+$userName   = $isLoggedIn ? (Auth::user()['first_name'] ?? 'Player') : '';
+
+$dashboardUrl = $basePath . '/public/customer/dashboard';
+if ($userRole === 'court_owner') {
+    $dashboardUrl = $basePath . '/public/owner/dashboard';
+} elseif ($userRole === 'super_admin' || $userRole === 'admin') {
+    $dashboardUrl = $basePath . '/public/admin/dashboard';
 }
-$favLogo = class_exists(Auth::class) ? Auth::getLogoUrl() : '/pikvero/assets/images/logo.png';
-$appName = 'Pikvero';
+
+// Active navigation link detection
+$isOwner = str_contains($reqUri, 'type=owner') || str_contains($script, 'owner-onboarding');
+$isPricing = str_contains($script, 'pricing') || str_contains($cleanUri, '/pricing');
+$isSearch = str_contains($script, 'search') || str_contains($script, 'facility') || str_contains($cleanUri, '/search') || str_contains($cleanUri, '/facility');
+$isOpenPlay = str_contains($script, 'open-play') || str_contains($cleanUri, '/open-play');
+$isHome = !$isOwner && !$isPricing && !$isSearch && !$isOpenPlay && (
+    str_ends_with($cleanUri, '/pikvero') ||
+    str_ends_with($cleanUri, '/pikvero/') ||
+    str_ends_with($cleanUri, '/public') ||
+    str_ends_with($cleanUri, '/public/') ||
+    str_ends_with($cleanUri, '/index.php') ||
+    $cleanUri === '/' ||
+    $cleanUri === ''
+);
+
+$logoImg = $basePath . '/assets/images/logo.png';
 ?>
-<script>
-  window.SERVER_AUTH_STATE = <?= json_encode(['isLoggedIn' => $isLoggedIn, 'role' => $role, 'homeLink' => $homeLink, 'logoUrl' => $favLogo, 'appName' => $appName]) ?>;
-  (function() {
-    var logoUrl = <?= json_encode($favLogo) ?>;
-    var links = document.querySelectorAll("link[rel*='icon']");
-    if (links.length === 0 && logoUrl) {
-      var link = document.createElement('link');
-      link.rel = 'icon';
-      link.type = 'image/png';
-      link.href = logoUrl;
-      document.head.appendChild(link);
+<!-- Styles for Global Floating Pill Header -->
+<style id="pikvero-global-header-css">
+  :root {
+    --hdr-coral: #ff5733;
+    --hdr-coral-hover: #e04422;
+    --hdr-lime: #d6f827;
+    --hdr-lime-hover: #c4e61b;
+    --hdr-ink: #0c1a15;
+  }
+
+  .navbar-pill {
+    position: fixed;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 56px);
+    max-width: 1324px;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 9999px;
+    padding: 8px 14px 8px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 1.5px solid rgba(255, 255, 255, 0.95);
+    box-shadow: 0 14px 34px -8px rgba(0, 0, 0, 0.16);
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+  }
+
+  .navbar-pill * {
+    box-sizing: border-box;
+  }
+
+  .brand-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: var(--hdr-ink);
+  }
+
+  .brand-logo-badge {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: #ffffff;
+    border: 1.5px solid #000;
+    box-shadow: 1.5px 1.5px 0 #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .brand-logo-badge img {
+    width: 82%;
+    height: 82%;
+    object-fit: contain;
+  }
+
+  .brand-name {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 900;
+    font-size: 1.35rem;
+    letter-spacing: -0.04em;
+    color: var(--hdr-ink);
+    text-transform: uppercase;
+  }
+
+  .nav-links-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .nav-pill-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: #1e293b;
+    border-radius: 9999px;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .nav-pill-item:hover {
+    color: #000;
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  .nav-pill-item.active {
+    background: var(--hdr-coral);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(255, 87, 51, 0.35);
+  }
+
+  .nav-pill-item i {
+    font-size: 1rem;
+  }
+
+  .nav-actions-wrap {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .nav-link-login {
+    font-size: 0.86rem;
+    font-weight: 800;
+    color: var(--hdr-ink);
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 8px 12px;
+    transition: color 0.2s ease;
+  }
+
+  .nav-link-login:hover {
+    color: var(--hdr-coral);
+  }
+
+  .btn-play-local {
+    background: var(--hdr-lime);
+    color: var(--hdr-ink);
+    font-weight: 800;
+    font-size: 0.88rem;
+    padding: 10px 22px;
+    border-radius: 9999px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1.5px solid rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 12px rgba(214, 248, 39, 0.45);
+    transition: all 0.2s ease;
+  }
+
+  .btn-play-local:hover {
+    background: var(--hdr-lime-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(214, 248, 39, 0.6);
+  }
+
+  .mobile-menu-btn {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 1.6rem;
+    color: var(--hdr-ink);
+    cursor: pointer;
+    padding: 4px;
+  }
+
+  /* Mobile Drawer */
+  .mobile-drawer {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 1001;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .mobile-drawer.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .drawer-content {
+    background: #ffffff;
+    width: 82%;
+    max-width: 320px;
+    height: 100%;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    box-shadow: -8px 0 25px rgba(0,0,0,0.25);
+  }
+
+  @media (max-width: 1080px) {
+    .nav-links-wrap {
+      display: none !important;
     }
-  })();
-
-  function toggleSidebar() {
-    var sc = document.getElementById('sidebar-container');
-    var bd = document.getElementById('sidebar-backdrop');
-    if (!sc) return;
-    var willOpen = !sc.classList.contains('is-open');
-    sc.classList.toggle('is-open', willOpen);
-    if (bd) bd.classList.toggle('is-active', willOpen);
-    document.body.classList.toggle('sidebar-open', willOpen);
+    .mobile-menu-btn {
+      display: block !important;
+    }
   }
 
-  function closeSidebar() {
-    var sc = document.getElementById('sidebar-container');
-    var bd = document.getElementById('sidebar-backdrop');
-    if (sc) sc.classList.remove('is-open');
-    if (bd) bd.classList.remove('is-active');
-    document.body.classList.remove('sidebar-open');
+  @media (max-width: 640px) {
+    .navbar-pill {
+      top: 12px !important;
+      width: calc(100% - 24px) !important;
+      padding: 8px 12px 8px 16px !important;
+    }
   }
+</style>
 
-  // Close sidebar on ESC key
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeSidebar();
-  });
-</script>
-<script src="/pikvero/assets/js/core/push-notifications.js"></script>
-
-<!-- Mobile Navigation Drawer / Sidebar for Guest & Marketplace Visitors -->
-<aside id="sidebar-container" class="portal-sidebar drawer-only">
-  <div style="display:flex; flex-direction:column; justify-content:space-between; height:100%;">
-    <div>
-      <!-- Brand Header with Close Button -->
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; padding-bottom:12px; border-bottom:2px solid var(--ink);">
-        <a href="<?= $homeLink ?>" class="brand-streetside" style="gap:10px; display:flex; align-items:center;">
-          <div class="brand-mark sidebar-logo-mark" style="width:42px; height:42px; border-radius:12px; overflow:hidden; padding:3px; display:flex; align-items:center; justify-content:center; background:var(--white); border:2px solid var(--ink); box-shadow:2px 2px 0 var(--ink); flex-shrink:0; box-sizing:border-box;">
-            <img src="<?= htmlspecialchars($favLogo) ?>" alt="Pikvero" style="width:100%; height:100%; max-width:100%; max-height:100%; object-fit:contain; display:block;" onerror="this.onerror=null; this.parentNode.innerHTML='P';">
-          </div>
-          <span style="font-weight:800; font-size:1.15rem; text-transform:uppercase; letter-spacing:-0.03em;"><?= htmlspecialchars($appName) ?></span>
-        </a>
-        <button type="button" onclick="closeSidebar()" class="button dark" style="padding:4px 10px; font-size:1.1rem; line-height:1;" id="sidebar-close-btn" aria-label="Close menu">&times;</button>
-      </div>
-
-      <div class="mono" style="margin-bottom:12px; color:var(--green); font-size:0.68rem; font-weight:700;">NAVIGATION MENU</div>
-
-      <!-- Navigation Links -->
-      <div id="sidebar-nav-links" style="display:flex; flex-direction:column; gap:6px;">
-        <a href="<?= $homeLink ?>" class="button <?= $isHome ? 'coral' : 'sand' ?>" style="justify-content:flex-start; width:100%; border-radius:12px; padding:10px 14px; font-size:0.85rem; box-shadow:2px 2px 0 var(--ink);">
-          <i class="bi bi-house-door-fill"></i>
-          <span>Home</span>
-        </a>
-        <a href="/pikvero/public/search.php" class="button <?= $isSearch ? 'coral' : 'sand' ?>" style="justify-content:flex-start; width:100%; border-radius:12px; padding:10px 14px; font-size:0.85rem; box-shadow:2px 2px 0 var(--ink);">
-          <i class="bi bi-search"></i>
-          <span>Explore Courts</span>
-        </a>
-        <a href="/pikvero/public/open-play.php" class="button <?= $isOpenPlay ? 'coral' : 'sand' ?>" style="justify-content:flex-start; width:100%; border-radius:12px; padding:10px 14px; font-size:0.85rem; box-shadow:2px 2px 0 var(--ink);">
-          <i class="bi bi-dribbble"></i>
-          <span>Open Play Socials</span>
-        </a>
-        <a href="/pikvero/public/pricing.php" class="button <?= $isPricing ? 'coral' : 'sand' ?>" style="justify-content:flex-start; width:100%; border-radius:12px; padding:10px 14px; font-size:0.85rem; box-shadow:2px 2px 0 var(--ink);">
-          <i class="bi bi-tag-fill"></i>
-          <span>Pricing &amp; Passes</span>
-        </a>
-        <a href="/pikvero/public/register.php?type=owner" class="button <?= $isOwner ? 'coral' : 'sand' ?>" style="justify-content:flex-start; width:100%; border-radius:12px; padding:10px 14px; font-size:0.85rem; box-shadow:2px 2px 0 var(--ink);">
-          <i class="bi bi-building-fill-add"></i>
-          <span>Become an Owner</span>
-        </a>
-
-        <!-- Extra Information Links -->
-        <div style="margin-top:6px; border-top:1px dashed var(--line); padding-top:10px;">
-          <div class="mono" style="margin-bottom:8px; color:#4a5c56; font-size:0.65rem; font-weight:700;">ABOUT &amp; SUPPORT</div>
-          <a href="/pikvero/public/about.php" class="button sand" style="justify-content:flex-start; width:100%; border-radius:10px; margin-bottom:4px; padding:8px 12px; font-size:0.78rem; box-shadow:1.5px 1.5px 0 var(--ink);">
-            <i class="bi bi-info-circle-fill"></i>
-            <span>About Pikvero</span>
-          </a>
-          <a href="/pikvero/public/contact.php" class="button sand" style="justify-content:flex-start; width:100%; border-radius:10px; padding:8px 12px; font-size:0.78rem; box-shadow:1.5px 1.5px 0 var(--ink);">
-            <i class="bi bi-envelope-fill"></i>
-            <span>Contact Us</span>
-          </a>
-        </div>
-      </div>
+<!-- Reusable Global Fixed Floating Pill Navbar -->
+<header class="navbar-pill" <?= !empty($GLOBALS['dbError'] ?? $dbError ?? null) ? 'style="top: 54px;"' : '' ?>>
+  <a href="<?= $basePath ?>/" class="brand-group">
+    <div class="brand-logo-badge">
+      <img src="<?= htmlspecialchars($logoImg) ?>" alt="Pikvero Logo" onerror="this.onerror=null; this.parentNode.innerHTML='🎾';">
     </div>
+    <span class="brand-name">PIKVERO</span>
+  </a>
 
-    <!-- Auth Actions in Sidebar Footer -->
-    <div id="sidebar-auth-section" style="border-top:2px solid var(--ink); padding-top:14px; margin-top:16px;">
+  <nav class="nav-links-wrap">
+    <a href="<?= $basePath ?>/" class="nav-pill-item <?= $isHome ? 'active' : '' ?>">
+      <i class="bi bi-house-door-fill"></i>
+      <span>Home</span>
+    </a>
+    <a href="<?= $basePath ?>/public/search" class="nav-pill-item <?= $isSearch ? 'active' : '' ?>">
+      <i class="bi bi-search"></i>
+      <span>Explore Courts</span>
+    </a>
+    <a href="<?= $basePath ?>/public/open-play" class="nav-pill-item <?= $isOpenPlay ? 'active' : '' ?>">
+      <i class="bi bi-people-fill"></i>
+      <span>Open Play</span>
+    </a>
+    <a href="<?= $basePath ?>/public/pricing" class="nav-pill-item <?= $isPricing ? 'active' : '' ?>">
+      <i class="bi bi-tag-fill"></i>
+      <span>Pricing</span>
+    </a>
+    <a href="<?= $basePath ?>/public/register?type=owner" class="nav-pill-item <?= $isOwner ? 'active' : '' ?>">
+      <i class="bi bi-shop"></i>
+      <span>Become an Owner</span>
+    </a>
+  </nav>
+
+  <div class="nav-actions-wrap">
+    <?php if ($isLoggedIn): ?>
+      <a href="<?= $dashboardUrl ?>" class="nav-link-login" style="color:var(--hdr-coral);">
+        <i class="bi bi-person-circle"></i> <?= htmlspecialchars($userName) ?>
+      </a>
+    <?php else: ?>
+      <a href="<?= $basePath ?>/public/login" class="nav-link-login">LOGIN</a>
+    <?php endif; ?>
+
+    <a href="<?= $basePath ?>/public/search" class="btn-play-local">
+      <i class="bi bi-play-fill"></i>
+      <span>Play Local</span>
+    </a>
+
+    <button class="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Open Navigation Menu">
+      <i class="bi bi-list"></i>
+    </button>
+  </div>
+</header>
+
+<!-- Mobile Navigation Drawer -->
+<div class="mobile-drawer" id="mobileDrawer" onclick="if(event.target === this) toggleMobileMenu()">
+  <div class="drawer-content">
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1.5px solid #e2e8f0; padding-bottom:12px;">
+      <span style="font-weight:800; font-family:'Outfit',sans-serif; text-transform:uppercase; font-size:1.1rem;">Menu</span>
+      <button onclick="toggleMobileMenu()" style="background:none; border:none; font-size:1.5rem; cursor:pointer; line-height:1;" aria-label="Close menu">&times;</button>
+    </div>
+    <a href="<?= $basePath ?>/" style="text-decoration:none; color:<?= $isHome ? 'var(--hdr-coral)' : '#1e293b' ?>; font-weight:700; font-size:0.95rem; display:flex; align-items:center; gap:8px;">
+      <i class="bi bi-house-door-fill"></i> Home
+    </a>
+    <a href="<?= $basePath ?>/public/search" style="text-decoration:none; color:<?= $isSearch ? 'var(--hdr-coral)' : '#1e293b' ?>; font-weight:700; font-size:0.95rem; display:flex; align-items:center; gap:8px;">
+      <i class="bi bi-search"></i> Explore Courts
+    </a>
+    <a href="<?= $basePath ?>/public/open-play" style="text-decoration:none; color:<?= $isOpenPlay ? 'var(--hdr-coral)' : '#1e293b' ?>; font-weight:700; font-size:0.95rem; display:flex; align-items:center; gap:8px;">
+      <i class="bi bi-people-fill"></i> Open Play
+    </a>
+    <a href="<?= $basePath ?>/public/pricing" style="text-decoration:none; color:<?= $isPricing ? 'var(--hdr-coral)' : '#1e293b' ?>; font-weight:700; font-size:0.95rem; display:flex; align-items:center; gap:8px;">
+      <i class="bi bi-tag-fill"></i> Pricing
+    </a>
+    <a href="<?= $basePath ?>/public/register?type=owner" style="text-decoration:none; color:<?= $isOwner ? 'var(--hdr-coral)' : '#1e293b' ?>; font-weight:700; font-size:0.95rem; display:flex; align-items:center; gap:8px;">
+      <i class="bi bi-shop"></i> Become an Owner
+    </a>
+    <div style="border-top:1.5px solid #e2e8f0; padding-top:14px; margin-top:auto;">
       <?php if ($isLoggedIn): ?>
-        <a href="<?= $homeLink ?>" class="button coral" style="justify-content:center; width:100%; border-radius:12px; padding:10px 14px; font-size:0.85rem; margin-bottom:8px; box-shadow:2px 2px 0 var(--ink);">
-          <i class="bi bi-grid-fill"></i>
-          <span>My Dashboard</span>
-        </a>
-        <button type="button" onclick="if(typeof AuthHelper !== 'undefined') AuthHelper.logout(); else window.location.href='/pikvero/public/login.php?action=logout';" class="button dark" style="justify-content:center; width:100%; border-radius:12px; padding:9px 14px; font-size:0.82rem; box-shadow:2px 2px 0 var(--coral);">
-          <i class="bi bi-box-arrow-right"></i>
-          <span>Logout</span>
-        </button>
+        <a href="<?= $dashboardUrl ?>" class="btn-play-local" style="width:100%; justify-content:center; text-decoration:none;">Dashboard</a>
       <?php else: ?>
-        <a href="/pikvero/public/login.php" class="button sand" style="justify-content:center; width:100%; border-radius:12px; padding:10px 14px; font-size:0.85rem; margin-bottom:8px; box-shadow:2px 2px 0 var(--ink);">
-          <i class="bi bi-box-arrow-in-right"></i>
-          <span>Login to Account</span>
-        </a>
-        <a href="/pikvero/public/register.php" class="button lime" style="justify-content:center; width:100%; border-radius:12px; padding:10px 14px; font-size:0.85rem; box-shadow:2px 2px 0 var(--ink);">
-          <i class="bi bi-person-plus-fill"></i>
-          <span>Play Local (Sign Up)</span>
-        </a>
+        <a href="<?= $basePath ?>/public/login" class="btn-play-local" style="width:100%; justify-content:center; text-decoration:none;">Login</a>
       <?php endif; ?>
     </div>
   </div>
-</aside>
-
-<!-- Backdrop overlay for drawer sidebar on mobile -->
-<div id="sidebar-backdrop" class="sidebar-backdrop" onclick="closeSidebar()"></div>
-
-<div id="navbar-container">
-  <nav class="nav-streetside">
-    <div style="display:flex; align-items:center; gap:8px;">
-      <a href="<?= $homeLink ?>" class="brand-streetside" style="gap:8px; display:flex; align-items:center;">
-        <div class="brand-mark navbar-logo-mark" style="width:38px; height:38px; font-size:1rem; border-radius:10px; flex-shrink:0; overflow:hidden; padding:3px; display:flex; align-items:center; justify-content:center; background:var(--white); border:2px solid var(--ink); box-sizing:border-box;">
-          <img src="<?= htmlspecialchars($favLogo) ?>" alt="Pikvero" style="width:100%; height:100%; max-width:100%; max-height:100%; object-fit:contain; display:block;" onerror="this.onerror=null; this.parentNode.innerHTML='P';">
-        </div>
-        <span style="font-weight:800; font-size:1.1rem; text-transform:uppercase;"><?= htmlspecialchars($appName) ?></span>
-      </a>
-    </div>
-    <div class="nav-links" style="display:flex; gap:14px; align-items:center; font-weight:800; font-size:0.85rem;">
-      <a href="<?= $homeLink ?>" class="<?= $isHome ? 'active' : '' ?>">Home</a>
-      <a href="/pikvero/public/search.php" class="<?= $isSearch ? 'active' : '' ?>">Explore Courts</a>
-      <a href="/pikvero/public/open-play.php" class="<?= $isOpenPlay ? 'active' : '' ?>">Open Play</a>
-      <?php if (!$isLoggedIn): ?>
-        <a href="/pikvero/public/pricing.php" class="<?= $isPricing ? 'active' : '' ?>">Pricing</a>
-        <a href="/pikvero/public/register.php?type=owner" class="<?= $isOwner ? 'active' : '' ?>">Become an Owner</a>
-      <?php endif; ?>
-    </div>
-    <div style="display:flex; align-items:center; gap:8px;">
-      <div class="navbar-auth-desktop" style="align-items:center; gap:8px;">
-        <?php if ($isLoggedIn): ?>
-          <a href="<?= $homeLink ?>" class="button coral" style="padding:6px 12px; font-size:0.8rem;">
-            <i class="bi bi-grid-fill"></i> My Dashboard
-          </a>
-        <?php else: ?>
-          <a href="/pikvero/public/login.php" class="mono" style="font-weight:700; padding:0 6px;">Login</a>
-          <a href="/pikvero/public/register.php" class="button" style="padding:8px 14px; font-size:0.82rem;">Play Local</a>
-        <?php endif; ?>
-      </div>
-      <button type="button" onclick="toggleSidebar()" class="hamburger-toggle-btn button dark" style="padding:6px 11px; font-size:1.15rem; align-items:center; justify-content:center; border-radius:10px; cursor:pointer;" title="Open Menu" aria-label="Toggle navigation menu">
-        <i class="bi bi-list" style="font-weight:900;"></i>
-      </button>
-    </div>
-  </nav>
 </div>
+
+<script>
+  function toggleMobileMenu() {
+    const drawer = document.getElementById('mobileDrawer');
+    if (drawer) {
+      drawer.classList.toggle('open');
+    }
+  }
+  // Backward compatibility alias for legacy scripts
+  function toggleSidebar() { toggleMobileMenu(); }
+  function closeSidebar() { 
+    const drawer = document.getElementById('mobileDrawer');
+    if (drawer) drawer.classList.remove('open');
+  }
+</script>

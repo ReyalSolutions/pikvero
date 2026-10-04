@@ -1760,57 +1760,8 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
   <section class="hero-bg-section">
     <div class="main-wrapper" <?= !empty($dbError) ? 'style="padding-top: 130px;"' : '' ?>>
 
-      <!-- FLOATING PILL NAVBAR -->
-      <header class="navbar-pill" <?= !empty($dbError) ? 'style="top: 54px;"' : '' ?>>
-        <a href="<?= $basePath ?>/" class="brand-group">
-          <div class="brand-logo-badge">
-            <img src="<?= $basePath ?>/assets/images/logo.png" alt="Pikvero Logo" onerror="this.onerror=null; this.parentNode.innerHTML='🎾';">
-          </div>
-          <span class="brand-name">PIKVERO</span>
-        </a>
-
-        <nav class="nav-links-wrap">
-          <a href="<?= $basePath ?>/" class="nav-pill-item active">
-            <i class="bi bi-house-door-fill"></i>
-            <span>Home</span>
-          </a>
-          <a href="<?= $basePath ?>/public/search" class="nav-pill-item">
-            <i class="bi bi-search"></i>
-            <span>Explore Courts</span>
-          </a>
-          <a href="<?= $basePath ?>/public/open-play" class="nav-pill-item">
-            <i class="bi bi-people-fill"></i>
-            <span>Open Play</span>
-          </a>
-          <a href="<?= $basePath ?>/public/pricing" class="nav-pill-item">
-            <i class="bi bi-tag-fill"></i>
-            <span>Pricing</span>
-          </a>
-          <a href="<?= $basePath ?>/public/register?type=owner" class="nav-pill-item">
-            <i class="bi bi-shop"></i>
-            <span>Become an Owner</span>
-          </a>
-        </nav>
-
-        <div class="nav-actions-wrap">
-          <?php if ($isLoggedIn): ?>
-            <a href="<?= $dashboardUrl ?>" class="nav-link-login" style="color:var(--coral);">
-              <i class="bi bi-person-circle"></i> <?= htmlspecialchars($userName) ?>
-            </a>
-          <?php else: ?>
-            <a href="<?= $basePath ?>/public/login" class="nav-link-login">LOGIN</a>
-          <?php endif; ?>
-
-          <a href="<?= $basePath ?>/public/search" class="btn-play-local">
-            <i class="bi bi-play-fill"></i>
-            <span>Play Local</span>
-          </a>
-
-          <button class="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Open Navigation Menu">
-            <i class="bi bi-list"></i>
-          </button>
-        </div>
-      </header>
+      <!-- REUSABLE GLOBAL HEADER -->
+      <?php require_once __DIR__ . '/includes/header.php'; ?>
 
       <!-- HERO SECTION GRID -->
       <div class="hero-grid">
@@ -2352,28 +2303,6 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
     </div>
   </footer>
 
-  <!-- Mobile Drawer Menu -->
-  <div class="mobile-drawer" id="mobileDrawer" onclick="toggleMobileMenu()">
-    <div class="drawer-content" onclick="event.stopPropagation()">
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1.5px solid #e2e8f0; padding-bottom:14px;">
-        <span style="font-family:'Outfit',sans-serif; font-weight:900; font-size:1.2rem;">PIKVERO</span>
-        <button onclick="toggleMobileMenu()" style="background:none; border:none; font-size:1.4rem; cursor:pointer;">&times;</button>
-      </div>
-      <a href="<?= $basePath ?>/" style="text-decoration:none; color:var(--coral); font-weight:700;"><i class="bi bi-house-door-fill"></i> Home</a>
-      <a href="<?= $basePath ?>/public/search" style="text-decoration:none; color:#1e293b; font-weight:700;"><i class="bi bi-search"></i> Explore Courts</a>
-      <a href="<?= $basePath ?>/public/open-play" style="text-decoration:none; color:#1e293b; font-weight:700;"><i class="bi bi-people-fill"></i> Open Play</a>
-      <a href="<?= $basePath ?>/public/pricing" style="text-decoration:none; color:#1e293b; font-weight:700;"><i class="bi bi-tag-fill"></i> Pricing</a>
-      <a href="<?= $basePath ?>/public/register?type=owner" style="text-decoration:none; color:#1e293b; font-weight:700;"><i class="bi bi-shop"></i> Become an Owner</a>
-      <div style="border-top:1.5px solid #e2e8f0; padding-top:12px; margin-top:auto;">
-        <?php if ($isLoggedIn): ?>
-          <a href="<?= $dashboardUrl ?>" class="btn-search-pill" style="width:100%; justify-content:center; text-decoration:none;">Dashboard</a>
-        <?php else: ?>
-          <a href="<?= $basePath ?>/public/login" class="btn-search-pill" style="width:100%; justify-content:center; text-decoration:none;">Login</a>
-        <?php endif; ?>
-      </div>
-    </div>
-  </div>
-
   <!-- Interactive Slider Script -->
   <script>
     let currentSlide = 0;
@@ -2406,11 +2335,6 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
       setInterval(() => {
         changeSlide(1);
       }, 6000);
-    }
-
-    function toggleMobileMenu() {
-      const drawer = document.getElementById('mobileDrawer');
-      drawer.classList.toggle('open');
     }
   </script>
 </body>

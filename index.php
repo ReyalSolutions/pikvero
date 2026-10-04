@@ -845,25 +845,23 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
 
     .amenities-badges-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-      gap: 8px;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px 10px;
       margin-bottom: 20px;
     }
 
     .amenity-chip {
       background: #f8fafc;
       border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 8px 10px;
+      border-radius: 10px;
+      padding: 7px 12px;
       display: flex;
       align-items: center;
-      gap: 6px;
-      font-size: 0.72rem;
+      gap: 7px;
+      font-size: 0.74rem;
       font-weight: 700;
       color: #1e293b;
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
 
     .amenity-chip i {

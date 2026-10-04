@@ -1,0 +1,14 @@
+{
+    "name": "pikvero/pikvero",
+    "description": "Pikvero - Pickleball Court Booking & Management Platform",
+    "type": "project",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/"
+        }
+    },
+    "require": {
+        "php": ">=7.4"
+    }
+}

@@ -1,0 +1,35 @@
+# Environment & Secret Credentials
+.env
+.env.*
+!.env.example
+*-firebase-adminsdk-*.json
+firebase-credentials.json
+
+# Local / Server Configuration Overrides
+*.local.php
+config.local.php
+app/Config/DatabaseConfig.local.php
+config/mail.local.php
+
+# Scratch & Temporary Testing Scripts
+scratch/
+temp/
+tmp/
+
+# Logs & Runtime Storage
+storage/logs/*.log
+*.log
+
+# Prompt & AI Workflow Scratchpads
+loop.md
+prompt*.md
+
+# IDE & OS Artifacts
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Composer Dependencies (if installed)
+vendor/

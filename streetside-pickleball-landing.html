@@ -1,0 +1,993 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Streetside Pickleball | Play Local</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+    :root {
+      --ink: #0d211d;
+      --green: #0b4d40;
+      --lime: #dfff4f;
+      --cream: #fbf9ef;
+      --sand: #eee9d8;
+      --coral: #ff745c;
+      --sky: #a7efff;
+      --white: #fffefa;
+      --line: rgba(13, 33, 29, .18);
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 100px
+    }
+
+    body {
+      margin: 0;
+      background: var(--cream);
+      color: var(--ink);
+      font: 500 16px/1.55 Manrope, Arial, sans-serif
+    }
+
+    .page {
+      overflow: hidden
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none
+    }
+
+    .mono,
+    .eyebrow {
+      font: 500 .72rem/1.2 "DM Mono", monospace;
+      letter-spacing: .1em;
+      text-transform: uppercase
+    }
+
+    .eyebrow {
+      color: var(--green)
+    }
+
+    .nav {
+      position: fixed;
+      z-index: 30;
+      top: 18px;
+      left: 50%;
+      width: min(1180px, calc(100% - 32px));
+      height: 69px;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 13px 0 21px;
+      border: 1px solid rgba(13, 33, 29, .14);
+      border-radius: 18px;
+      background: rgba(255, 254, 250, .82);
+      box-shadow: 0 8px 30px rgba(13, 33, 29, .08);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      transition: top .35s ease, height .35s ease, box-shadow .35s ease, background .35s ease
+    }
+
+    .nav.is-scrolled {
+      top: 8px;
+      height: 61px;
+      background: rgba(255, 254, 250, .94);
+      box-shadow: 0 12px 35px rgba(13, 33, 29, .14)
+    }
+
+    .scroll-progress {
+      position: fixed;
+      z-index: 40;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: rgba(13, 33, 29, .08)
+    }
+
+    .scroll-progress span {
+      display: block;
+      width: 0;
+      height: 100%;
+      background: var(--coral);
+      transition: width .08s linear
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font: 800 1.06rem/.92 Manrope, sans-serif;
+      letter-spacing: -.06em;
+      text-transform: uppercase
+    }
+
+    .brand-mark {
+      width: 29px;
+      height: 29px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--coral);
+      color: var(--ink);
+      font-size: .8rem;
+      box-shadow: inset 0 0 0 2px var(--ink)
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 29px;
+      font-size: .84rem;
+      font-weight: 800
+    }
+
+    .nav-links a {
+      position: relative
+    }
+
+    .nav-links a:after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -6px;
+      height: 2px;
+      background: var(--coral);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: .2s
+    }
+
+    .nav-links a:hover:after {
+      transform: scaleX(1)
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 13px 18px;
+      border: 1.5px solid var(--ink);
+      border-radius: 999px;
+      background: var(--lime);
+      box-shadow: 3px 3px 0 var(--ink);
+      font-size: .85rem;
+      font-weight: 800;
+      transition: transform .18s, box-shadow .18s
+    }
+
+    .button:hover {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0 var(--ink)
+    }
+
+    .button.dark {
+      background: var(--ink);
+      color: var(--white);
+      box-shadow: none;
+      border-color: var(--ink)
+    }
+
+    .hero {
+      position: relative;
+      min-height: 760px;
+      padding: 185px max(5vw, 40px) 90px;
+      display: grid;
+      grid-template-columns: minmax(420px, 1fr) minmax(390px, .9fr);
+      align-items: center;
+      gap: 40px;
+      background: radial-gradient(circle at 83% 12%, rgba(223, 255, 79, .65), transparent 22%), linear-gradient(120deg, var(--cream) 0 56%, #b4f1fb 56%)
+    }
+
+    .hero:before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: .2;
+      background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: linear-gradient(90deg, black, transparent 72%)
+    }
+
+    .hero:after {
+      content: "";
+      position: absolute;
+      width: 370px;
+      height: 370px;
+      border: 2px solid rgba(13, 33, 29, .16);
+      border-radius: 50%;
+      right: 6%;
+      top: -166px;
+      animation: orbit 15s linear infinite
+    }
+
+    .hero-copy {
+      position: relative;
+      z-index: 1;
+      max-width: 660px
+    }
+
+    .hero h1 {
+      max-width: 730px;
+      margin: 19px 0 23px;
+      font-size: clamp(4.1rem, 8vw, 7.7rem);
+      line-height: .84;
+      letter-spacing: -.092em;
+      text-transform: uppercase
+    }
+
+    .hero h1 em {
+      color: var(--coral);
+      font-style: normal
+    }
+
+    .lead {
+      max-width: 510px;
+      margin: 0 0 29px;
+      font-size: 1.13rem;
+      color: #294039
+    }
+
+    .hero-meta {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-top: 44px;
+      font-size: .77rem;
+      font-weight: 800
+    }
+
+    .avatars {
+      display: flex
+    }
+
+    .avatar {
+      width: 31px;
+      height: 31px;
+      margin-right: -8px;
+      border: 2px solid var(--cream);
+      border-radius: 50%;
+      background: var(--green)
+    }
+
+    .avatar:nth-child(2) {
+      background: var(--coral)
+    }
+
+    .avatar:nth-child(3) {
+      background: var(--lime)
+    }
+
+    .hero-art {
+      position: relative;
+      z-index: 1;
+      height: 470px;
+      isolation: isolate;
+      transition: transform .25s ease-out
+    }
+
+    .court {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      width: min(100%, 505px);
+      height: 392px;
+      border: 3px solid var(--ink);
+      border-radius: 34px 34px 15px 15px;
+      background: var(--green);
+      box-shadow: 13px 13px 0 var(--ink);
+      overflow: hidden;
+      transform: rotate(3deg)
+    }
+
+    .court:before,
+    .court:after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      border-color: rgba(255, 255, 255, .84);
+      border-style: solid
+    }
+
+    .court:before {
+      top: 48%;
+      border-width: 3px 0 0
+    }
+
+    .court:after {
+      top: 11%;
+      bottom: 11%;
+      left: 49%;
+      right: auto;
+      border-width: 0 0 0 3px
+    }
+
+    .court-lines {
+      position: absolute;
+      inset: 11% 10%;
+      border: 3px solid rgba(255, 255, 255, .84);
+      border-radius: 12px
+    }
+
+    .court-lines:after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 49%;
+      border-top: 4px solid #fff;
+      filter: drop-shadow(0 0 7px rgba(255, 255, 255, .8));
+      animation: netPulse 2.5s ease-in-out infinite
+    }
+
+    .ball {
+      position: absolute;
+      z-index: 2;
+      top: 3px;
+      right: 11%;
+      width: 152px;
+      height: 152px;
+      border: 3px solid var(--ink);
+      border-radius: 50%;
+      background: var(--lime);
+      box-shadow: 9px 9px 0 var(--ink);
+      animation: bob 4s ease-in-out infinite
+    }
+
+    .holes {
+      position: absolute;
+      inset: 30px;
+      background: radial-gradient(circle at 14% 16%, var(--ink) 0 6px, transparent 7px), radial-gradient(circle at 48% 12%, var(--ink) 0 6px, transparent 7px), radial-gradient(circle at 80% 21%, var(--ink) 0 6px, transparent 7px), radial-gradient(circle at 28% 50%, var(--ink) 0 6px, transparent 7px), radial-gradient(circle at 66% 53%, var(--ink) 0 6px, transparent 7px), radial-gradient(circle at 20% 82%, var(--ink) 0 6px, transparent 7px), radial-gradient(circle at 78% 84%, var(--ink) 0 6px, transparent 7px)
+    }
+
+    .paddle {
+      position: absolute;
+      z-index: 3;
+      left: 7%;
+      bottom: -10px;
+      width: 195px;
+      height: 246px;
+      border: 4px solid var(--ink);
+      border-radius: 49% 49% 44% 44%;
+      background: var(--coral);
+      box-shadow: 7px 7px 0 var(--ink);
+      transform: rotate(-20deg);
+      animation: paddleFloat 5s ease-in-out infinite
+    }
+
+    .paddle:after {
+      content: "";
+      position: absolute;
+      left: 66px;
+      bottom: -112px;
+      width: 56px;
+      height: 142px;
+      border: 4px solid var(--ink);
+      border-radius: 0 0 26px 26px;
+      background: var(--sand);
+      z-index: -1
+    }
+
+    .paddle small {
+      position: absolute;
+      inset: 80px 20px auto;
+      text-align: center;
+      font: 800 1rem/.9 Manrope, sans-serif;
+      text-transform: uppercase;
+      color: var(--white);
+      letter-spacing: -.07em
+    }
+
+    .stamp {
+      position: absolute;
+      z-index: 4;
+      right: 2%;
+      bottom: 30px;
+      padding: 13px 16px;
+      border: 2px solid var(--ink);
+      background: var(--cream);
+      font: 800 .72rem/1.28 "DM Mono", monospace;
+      transform: rotate(8deg);
+      box-shadow: 4px 4px 0 var(--ink);
+      animation: stamp 5s ease-in-out infinite
+    }
+
+    .ticker {
+      display: flex;
+      overflow: hidden;
+      background: var(--lime);
+      border-block: 2px solid var(--ink);
+      white-space: nowrap
+    }
+
+    .ticker span {
+      padding: 14px 0;
+      animation: marquee 24s linear infinite;
+      font: 800 .83rem/1 "DM Mono", monospace;
+      letter-spacing: .09em;
+      text-transform: uppercase
+    }
+
+    .ticker b {
+      color: var(--coral);
+      padding: 0 22px
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      max-width: 1280px;
+      margin: auto
+    }
+
+    .stat {
+      padding: 42px max(3vw, 25px);
+      border-right: 1px solid var(--line)
+    }
+
+    .stat:last-child {
+      border: 0
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 3.4rem;
+      line-height: .9;
+      letter-spacing: -.09em
+    }
+
+    .stat span {
+      display: block;
+      margin-top: 9px;
+      font-size: .86rem;
+      font-weight: 800;
+      color: #52635e
+    }
+
+    section {
+      padding: 112px max(5vw, 40px)
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      gap: 9vw
+    }
+
+    .copy p {
+      max-width: 480px;
+      color: #52635e;
+      font-size: 1.08rem
+    }
+
+    h2 {
+      margin: 16px 0 21px;
+      font-size: clamp(3rem, 5.5vw, 5.5rem);
+      line-height: .88;
+      letter-spacing: -.085em;
+      text-transform: uppercase
+    }
+
+    .event-card {
+      position: relative;
+      padding: 32px;
+      border: 2px solid var(--ink);
+      border-radius: 7px;
+      background: var(--sky);
+      box-shadow: 12px 12px 0 var(--ink);
+      transform: rotate(2deg)
+    }
+
+    .event-card:before {
+      content: "";
+      position: absolute;
+      inset: 14px;
+      border: 1px dashed rgba(13, 33, 29, .32);
+      pointer-events: none
+    }
+
+    .event-card>* {
+      position: relative
+    }
+
+    .event-card h3 {
+      margin: 10px 0 15px;
+      font-size: 2.15rem;
+      line-height: .95;
+      letter-spacing: -.07em
+    }
+
+    .event-card .date {
+      display: inline-block;
+      padding: 6px 9px;
+      background: var(--cream);
+      font: 500 .72rem "DM Mono", monospace
+    }
+
+    .event-card p {
+      max-width: 330px
+    }
+
+    .mini-rule {
+      height: 1px;
+      margin: 26px 0;
+      background: var(--ink)
+    }
+
+    .programs {
+      background: var(--ink);
+      color: var(--white);
+      position: relative
+    }
+
+    .programs:before {
+      content: "";
+      position: absolute;
+      right: -70px;
+      top: -140px;
+      width: 350px;
+      height: 350px;
+      border: 38px solid var(--lime);
+      border-radius: 50%;
+      opacity: .95
+    }
+
+    .programs .eyebrow {
+      color: var(--lime)
+    }
+
+    .program-grid {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      margin-top: 43px
+    }
+
+    .program {
+      min-height: 280px;
+      padding: 26px;
+      border: 1px solid rgba(255, 255, 255, .7);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform .2s, background .2s
+    }
+
+    .program:hover {
+      transform: translateY(-8px);
+      background: #163a33
+    }
+
+    .program:nth-child(2) {
+      background: var(--lime);
+      color: var(--ink);
+      border-color: var(--lime)
+    }
+
+    .program .num {
+      font: 500 .75rem "DM Mono", monospace
+    }
+
+    .program b {
+      font-size: 2rem;
+      line-height: .9;
+      letter-spacing: -.07em
+    }
+
+    .program p {
+      margin: 0;
+      max-width: 250px
+    }
+
+    .program span:last-child {
+      font-size: .84rem;
+      font-weight: 800
+    }
+
+    .quote {
+      padding: 92px max(5vw, 40px);
+      text-align: center;
+      background: var(--sand)
+    }
+
+    .quote blockquote {
+      max-width: 920px;
+      margin: 0 auto;
+      font-size: clamp(1.9rem, 4vw, 4rem);
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -.07em
+    }
+
+    .quote cite {
+      display: block;
+      margin-top: 24px;
+      font: 500 .75rem "DM Mono", monospace;
+      font-style: normal
+    }
+
+    .cta {
+      position: relative;
+      isolation: isolate;
+      text-align: center;
+      padding: 126px 30px;
+      background: var(--coral);
+      overflow: hidden
+    }
+
+    .cta:before,
+    .cta:after {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      width: 420px;
+      height: 420px;
+      border: 30px solid rgba(223, 255, 79, .8);
+      border-radius: 50%
+    }
+
+    .cta:before {
+      left: -245px;
+      bottom: -290px
+    }
+
+    .cta:after {
+      right: -245px;
+      top: -280px
+    }
+
+    .cta h2 {
+      max-width: 800px;
+      margin: 15px auto 30px
+    }
+
+    .cta .eyebrow {
+      color: var(--ink)
+    }
+
+    footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 28px max(5vw, 40px);
+      font-size: .78rem;
+      font-weight: 800
+    }
+
+    footer span:last-child {
+      color: #5c6b66
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity .7s cubic-bezier(.2, .8, .2, 1), transform .7s cubic-bezier(.2, .8, .2, 1)
+    }
+
+    .reveal.is-visible {
+      opacity: 1;
+      transform: none
+    }
+
+    .program.reveal:nth-child(2) {
+      transition-delay: .12s
+    }
+
+    .program.reveal:nth-child(3) {
+      transition-delay: .24s
+    }
+
+    .hero-copy>* {
+      animation: heroIn .85s both
+    }
+
+    .hero-copy .eyebrow {
+      animation-delay: .1s
+    }
+
+    .hero-copy h1 {
+      animation-delay: .2s
+    }
+
+    .hero-copy .lead {
+      animation-delay: .35s
+    }
+
+    .hero-copy .button {
+      animation-delay: .48s
+    }
+
+    .hero-copy .hero-meta {
+      animation-delay: .61s
+    }
+
+    .magnetic {
+      will-change: transform
+    }
+
+    @keyframes heroIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px)
+      }
+
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+    @keyframes bob {
+      50% {
+        transform: translateY(-14px) rotate(-6deg)
+      }
+    }
+
+    @keyframes paddleFloat {
+      50% {
+        transform: translateY(-9px) rotate(-16deg)
+      }
+    }
+
+    @keyframes stamp {
+      50% {
+        transform: rotate(4deg) translateY(-5px)
+      }
+    }
+
+    @keyframes netPulse {
+      50% {
+        opacity: .35;
+        transform: scaleX(.97)
+      }
+    }
+
+    @keyframes orbit {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    @keyframes marquee {
+      to {
+        transform: translateX(-50%)
+      }
+    }
+
+    @media(prefers-reduced-motion:reduce) {
+
+      *,
+      *:before,
+      *:after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important
+      }
+    }
+
+    @media(max-width:780px) {
+      .nav {
+        top: 10px;
+        width: calc(100% - 20px);
+        height: 61px;
+        padding-left: 15px
+      }
+
+      .nav-links {
+        display: none
+      }
+
+      .nav .button {
+        padding: 10px 13px;
+        font-size: .73rem
+      }
+
+      .hero {
+        min-height: 790px;
+        padding: 135px 25px 35px;
+        display: block;
+        background: linear-gradient(157deg, var(--cream) 0 63%, #b4f1fb 63%)
+      }
+
+      .hero h1 {
+        font-size: clamp(3.6rem, 17vw, 5.4rem)
+      }
+
+      .hero-art {
+        height: 330px;
+        margin: 30px -12px 0
+      }
+
+      .court {
+        height: 270px;
+        width: 340px
+      }
+
+      .ball {
+        width: 112px;
+        height: 112px
+      }
+
+      .paddle {
+        transform: scale(.72) rotate(-20deg);
+        transform-origin: bottom left
+      }
+
+      .stamp {
+        bottom: 8px
+      }
+
+      .stats,
+      .split,
+      .program-grid {
+        grid-template-columns: 1fr
+      }
+
+      .stat {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        padding: 29px 25px
+      }
+
+      .stat:last-child {
+        border-bottom: 0
+      }
+
+      .split {
+        gap: 55px
+      }
+
+      .programs:before {
+        width: 230px;
+        height: 230px;
+        border-width: 24px;
+        right: -100px;
+        top: -70px
+      }
+
+      section {
+        padding: 78px 25px
+      }
+
+      .quote {
+        padding: 75px 25px
+      }
+
+      .cta {
+        padding: 92px 25px
+      }
+
+      footer {
+        padding: 23px 25px;
+        flex-direction: column
+      }
+
+      .event-card {
+        transform: none;
+        box-shadow: 7px 7px 0 var(--ink)
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+    <div class="scroll-progress" aria-hidden="true"><span></span></div>
+    <nav class="nav" aria-label="Main navigation">
+      <a class="brand" href="#top"><span class="brand-mark">+</span><span>Streetside<br>Pickleball</span></a>
+      <div class="nav-links"><a href="#play">Play</a><a href="#community">Community</a><a href="#programs">Programs</a>
+      </div>
+      <a class="button dark" href="#join">Get on court <span aria-hidden="true">&#8594;</span></a>
+    </nav>
+    <main id="top">
+      <section class="hero">
+        <div class="hero-copy">
+          <div class="eyebrow">Your neighborhood court club</div>
+          <h1>Meet you<br>on the <em>line.</em></h1>
+          <p class="lead">Streetside Pickleball brings good rallies, friendly competition, and the whole neighborhood
+            together. No country-club energy required.</p><a class="button" href="#join">Find a game near you <span
+              aria-hidden="true">&#8594;</span></a>
+          <div class="hero-meta">
+            <div class="avatars"><i class="avatar"></i><i class="avatar"></i><i class="avatar"></i></div><span>Join 400+
+              players rallying around town</span>
+          </div>
+        </div>
+        <div class="hero-art" aria-label="Stylized pickleball court illustration">
+          <div class="ball">
+            <div class="holes"></div>
+          </div>
+          <div class="court">
+            <div class="court-lines"></div>
+          </div>
+          <div class="paddle"><small>Street<br>Side</small></div>
+          <div class="stamp">ALL SKILL LEVELS<br>WELCOME</div>
+        </div>
+      </section>
+      <div class="ticker" aria-hidden="true"><span>DROP IN <b>+</b> RALLY UP <b>+</b> MEET YOUR PEOPLE <b>+</b> PLAY
+          LOCAL <b>+</b> DROP IN <b>+</b> RALLY UP <b>+</b> MEET YOUR PEOPLE <b>+</b> PLAY LOCAL <b>+</b></span></div>
+      <div class="stats" id="community">
+        <div class="stat reveal"><strong>12+</strong><span>weekly open-play sessions</span></div>
+        <div class="stat reveal"><strong>400</strong><span>neighbors on court</span></div>
+        <div class="stat reveal"><strong>0</strong><span>experience needed to start</span></div>
+      </div>
+      <section class="split" id="play">
+        <div class="copy reveal">
+          <div class="eyebrow">Pick up a paddle</div>
+          <h2>More play.<br>Less planning.</h2>
+          <p>Drop into a game, join a league, or bring your crew. We organize the courts, match up the players, and keep
+            the good energy moving.</p>
+        </div>
+        <article class="event-card reveal"><span class="date">TONIGHT AT STREETSIDE</span>
+          <h3>Open Play<br>6:30 - 8:30 PM</h3>
+          <p>Riverside Courts. All skill levels. Paddles available.</p>
+          <div class="mini-rule"></div><a class="button magnetic" href="#join">Save my spot <span
+              aria-hidden="true">&#8594;</span></a>
+        </article>
+      </section>
+      <section class="programs" id="programs">
+        <div class="eyebrow reveal">Find your kind of game</div>
+        <h2 class="reveal">Play it your way.</h2>
+        <div class="program-grid">
+          <article class="program reveal"><span class="num">01</span><b>Open Play</b>
+            <p>Walk on, warm up, and meet your next doubles partner.</p><span>Every week &#8594;</span>
+          </article>
+          <article class="program reveal"><span class="num">02</span><b>Street Leagues</b>
+            <p>Seasonal teams, playful rivalries, and a reason to text the group chat.</p><span>Join a team
+              &#8594;</span>
+          </article>
+          <article class="program reveal"><span class="num">03</span><b>First Serve</b>
+            <p>A no-pressure intro for new players who want to learn the basics.</p><span>Start here &#8594;</span>
+          </article>
+        </div>
+      </section>
+      <aside class="quote reveal">
+        <blockquote>"The easiest way to make a Wednesday night feel like the weekend."</blockquote><cite>JAMIE L. -
+          STREET LEAGUE PLAYER</cite>
+      </aside>
+      <section class="cta" id="join">
+        <div class="eyebrow reveal">The court is calling</div>
+        <h2 class="reveal">Your next favorite game is around the corner.</h2><a class="button magnetic reveal"
+          href="mailto:hello@streetsidepickleball.com">Join Streetside Pickleball <span
+            aria-hidden="true">&#8594;</span></a>
+      </section>
+    </main>
+    <footer><span>&copy; 2026 Streetside Pickleball</span><span>Play local. Rally often.</span></footer>
+  </div>
+  <script>
+    const nav = document.querySelector('.nav');
+    const progress = document.querySelector('.scroll-progress span');
+    const onScroll = () => {
+      const max = document.documentElement.scrollHeight - innerHeight;
+      progress.style.width = `${max ? (scrollY / max) * 100 : 0}%`;
+      nav.classList.toggle('is-scrolled', scrollY > 20);
+    };
+    addEventListener('scroll', onScroll, { passive: true }); onScroll();
+    const observer = new IntersectionObserver((entries) => entries.forEach(({ target, isIntersecting }) => {
+      if (isIntersecting) { target.classList.add('is-visible'); observer.unobserve(target); }
+    }), { threshold: .14 });
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+    document.querySelectorAll('.magnetic').forEach(el => {
+      el.addEventListener('pointermove', e => { const r = el.getBoundingClientRect(); el.style.transform = `translate(${(e.clientX - r.left - r.width / 2) * .1}px, ${(e.clientY - r.top - r.height / 2) * .12}px)`; });
+      el.addEventListener('pointerleave', () => el.style.transform = '');
+    });
+    const art = document.querySelector('.hero-art');
+    if (matchMedia('(pointer:fine)').matches) addEventListener('pointermove', e => { art.style.transform = `translate(${(e.clientX - innerWidth / 2) * .012}px, ${(e.clientY - innerHeight / 2) * .012}px)`; });
+  </script>
+</body>
+
+</html>

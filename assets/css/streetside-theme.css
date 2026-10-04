@@ -1,0 +1,644 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --ink: #0d211d;
+  --green: #0b4d40;
+  --lime: #dfff4f;
+  --cream: #fbf9ef;
+  --sand: #eee9d8;
+  --coral: #ff745c;
+  --sky: #a7efff;
+  --white: #fffefa;
+  --line: rgba(13, 33, 29, .18);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box !important;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--cream);
+  color: var(--ink);
+  font: 500 16px/1.55 Manrope, system-ui, -apple-system, sans-serif;
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.mono, .eyebrow {
+  font: 500 0.75rem/1.2 "DM Mono", monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.eyebrow {
+  color: var(--green);
+}
+
+/* Full-Height 100vh Sidebar Portal Layout - Hidden off-screen by default */
+.portal-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 280px;
+  height: 100vh;
+  background: var(--white);
+  border-right: 2px solid var(--ink);
+  z-index: 55000 !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px 16px;
+  overflow-y: auto;
+  transform: translateX(-100%);
+  box-shadow: 6px 0 20px rgba(13, 33, 29, 0.25);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.portal-sidebar.is-open {
+  transform: translateX(0) !important;
+}
+
+/* Permanent Fixed Sidebar for 2-column Admin/Owner Dashboards on Desktop */
+@media (min-width: 993px) {
+  .portal-sidebar.portal-sidebar-permanent {
+    transform: translateX(0) !important;
+    z-index: 1020 !important;
+    box-shadow: none !important;
+  }
+}
+
+/* Off-canvas Drawer-only sidebar layout */
+.portal-sidebar.drawer-only {
+  transform: translateX(-100%) !important;
+}
+
+.portal-sidebar.drawer-only.is-open {
+  transform: translateX(0) !important;
+}
+
+/* Sidebar Backdrop Overlay */
+.sidebar-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(13, 33, 29, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 54990;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.sidebar-backdrop.is-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+body.sidebar-open {
+  overflow: hidden !important;
+}
+
+/* Strictly hide off-canvas drawer sidebars & hamburger toggle button on Desktop screens */
+@media (min-width: 993px) {
+  .portal-sidebar.drawer-only {
+    display: none !important;
+  }
+  .hamburger-toggle-btn {
+    display: none !important;
+  }
+  .sidebar-backdrop {
+    display: none !important;
+  }
+}
+
+.portal-nav {
+  position: fixed;
+  top: 0;
+  left: 260px;
+  width: calc(100% - 260px);
+  height: 65px;
+  z-index: 1010;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  border-bottom: 2px solid var(--ink);
+  background: rgba(255, 254, 250, 0.94);
+  backdrop-filter: blur(12px);
+  transition: left 0.3s ease, width 0.3s ease;
+}
+
+.portal-main {
+  margin-left: 260px;
+  padding: 85px 28px 20px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: margin-left 0.3s ease;
+}
+
+.portal-footer {
+  margin-top: 40px;
+  padding: 20px 0 10px;
+  border-top: 2px solid var(--ink);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  font-weight: 800;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Form & Input Field Utilities */
+.input-field {
+  width: 100%;
+  padding: 9px 12px;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  font-family: inherit;
+  font-weight: 700;
+  outline: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.input-field.is-valid {
+  border-color: var(--green) !important;
+  background: #f0fdf4 !important;
+}
+
+.input-field.is-invalid {
+  border-color: var(--coral) !important;
+  background: #fff5f3 !important;
+}
+
+.inline-feedback {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-top: 3px;
+  min-height: 16px;
+}
+
+.inline-feedback.invalid {
+  color: var(--coral);
+}
+
+.inline-feedback.valid {
+  color: var(--green);
+}
+
+/* Form Field Groups & Password Utilities */
+.form-section {
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: var(--white);
+}
+
+.form-section-title {
+  font: 700 0.75rem "DM Mono", monospace;
+  color: var(--green);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.password-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 10px;
+  background: transparent;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.strength-meter-wrap {
+  margin-top: 6px;
+}
+
+.strength-meter-bg {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--ink);
+}
+
+.strength-bar {
+  height: 100%;
+  width: 0%;
+  transition: width 0.3s ease, background 0.3s ease;
+}
+
+.strength-bar.weak { width: 33%; background: var(--coral); }
+.strength-bar.fair { width: 66%; background: #facc15; }
+.strength-bar.strong { width: 100%; background: var(--green); }
+
+/* Responsive Table & Card View Utilities */
+.desktop-table-wrap {
+  display: block;
+}
+
+.mobile-cards-wrap {
+  display: none;
+}
+
+/* Neo-brutalist buttons */
+.btn-streetside, .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--lime);
+  color: var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  font-size: 0.88rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-streetside:hover, .button:hover {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ink);
+  background: #d4f738;
+}
+
+.btn-streetside.dark, .button.dark {
+  background: var(--ink);
+  color: var(--white);
+  box-shadow: 3px 3px 0 var(--coral);
+}
+
+.btn-streetside.coral, .button.coral {
+  background: var(--coral);
+  color: var(--white);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.btn-streetside.sand, .button.sand {
+  background: var(--sand);
+  color: var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+/* Neo-brutalist cards */
+.card-streetside {
+  background: var(--white);
+  border: 2px solid var(--ink);
+  border-radius: 16px;
+  box-shadow: 5px 5px 0 var(--ink);
+  padding: 24px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-streetside:hover {
+  transform: translateY(-3px);
+  box-shadow: 7px 7px 0 var(--ink);
+}
+
+.card-streetside.sky { background: var(--sky); }
+.card-streetside.lime { background: var(--lime); }
+.card-streetside.sand { background: var(--sand); }
+
+/* Public Landing Navbar */
+.nav-streetside {
+  position: fixed;
+  z-index: 1000;
+  top: 16px;
+  left: 50%;
+  width: min(1200px, calc(100% - 24px));
+  height: 65px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  border: 2px solid var(--ink);
+  border-radius: 20px;
+  background: rgba(255, 254, 250, 0.94);
+  box-shadow: 4px 4px 0 var(--ink);
+  backdrop-filter: blur(12px);
+}
+
+.nav-links a {
+  color: var(--ink);
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 10px;
+  font-weight: 800;
+  transition: all 0.15s ease;
+  border: 2px solid transparent;
+}
+
+.nav-links a:hover {
+  color: var(--coral);
+}
+
+.nav-links a.active,
+.nav-links a.active:hover {
+  background: var(--coral) !important;
+  color: var(--white) !important;
+  border: 2px solid var(--ink) !important;
+  box-shadow: 2px 2px 0 var(--ink) !important;
+}
+
+.brand-streetside {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font: 800 1.1rem/1 Manrope, sans-serif;
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+}
+
+.brand-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--coral);
+  color: var(--ink);
+  font-weight: 800;
+  border: 2px solid var(--ink);
+}
+
+/* Brand Logo Containers & Image Fitting */
+.brand-mark.navbar-logo-mark,
+.brand-mark.sidebar-logo-mark {
+  background: var(--white) !important;
+  border: 2px solid var(--ink) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  padding: 3px !important;
+}
+
+.brand-mark.navbar-logo-mark img,
+.brand-mark.sidebar-logo-mark img,
+.brand-mark img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  display: block !important;
+  box-sizing: border-box !important;
+}
+
+/* Badges */
+.badge-streetside {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--ink);
+  font: 600 0.75rem "DM Mono", monospace;
+  text-transform: uppercase;
+}
+
+.badge-streetside.lime { background: var(--lime); color: var(--ink); }
+.badge-streetside.coral { background: var(--coral); color: var(--white); }
+.badge-streetside.sky { background: var(--sky); color: var(--ink); }
+.badge-streetside.green { background: var(--green); color: var(--white); }
+.badge-streetside.sand { background: var(--sand); color: var(--ink); }
+.badge-streetside.dark { background: var(--ink); color: var(--white); }
+
+.header-mobile-toggle-btn,
+.hamburger-toggle-btn {
+  display: none;
+}
+.navbar-auth-desktop {
+  display: flex;
+}
+
+/* Responsive Media Queries */
+@media (max-width: 992px) {
+  #mobile-toggle-btn,
+  .hamburger-toggle-btn,
+  #sidebar-close-btn {
+    display: inline-flex !important;
+  }
+
+  .portal-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 55000 !important;
+    transform: translateX(-100%);
+    box-shadow: 6px 0 20px rgba(13, 33, 29, 0.25);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .portal-sidebar.is-open {
+    transform: translateX(0) !important;
+  }
+
+  .portal-nav {
+    left: 0;
+    width: 100%;
+    padding: 0 14px;
+  }
+
+  .portal-main {
+    margin-left: 0;
+    padding: 80px 16px 20px;
+  }
+
+  .nav-streetside {
+    top: 10px;
+    height: 58px;
+    padding: 0 12px;
+  }
+
+  .nav-links {
+    display: none !important;
+  }
+
+  .navbar-auth-desktop {
+    display: none !important;
+  }
+
+  .hamburger-toggle-btn,
+  .header-mobile-toggle-btn {
+    display: inline-flex !important;
+  }
+}
+
+@media (max-width: 768px) {
+  #portal-live-clock,
+  .mobile-hide-time {
+    display: none !important;
+  }
+
+  .hero-section {
+    grid-template-columns: 1fr !important;
+    padding-top: 110px !important;
+    gap: 30px !important;
+  }
+
+  .card-streetside {
+    padding: 16px;
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+
+  h1 { font-size: 2.2rem !important; }
+  h2 { font-size: 1.8rem !important; }
+}
+
+@media (max-width: 640px) {
+  .desktop-table-wrap { display: none; }
+  .mobile-cards-wrap { display: flex; flex-direction: column; gap: 12px; }
+}
+
+@media (max-width: 480px) {
+  .btn-streetside, .button {
+    padding: 9px 12px;
+    font-size: 0.78rem;
+  }
+}
+
+/* Global Full-Screen Modal Overlay Backdrop Covering Header & Sidebar */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(13, 33, 29, 0.78);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 50000 !important;
+  place-items: center;
+  padding: 20px;
+}
+
+.modal-overlay.active {
+  display: grid;
+}
+
+/* Fixed Bottom Navigation Bar for Mobile Customer Portal */
+.bottom-nav-streetside {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 65px;
+  background: rgba(255, 254, 250, 0.98);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 2px solid var(--ink);
+  box-shadow: 0 -4px 16px rgba(13, 33, 29, 0.12);
+  z-index: 50000 !important;
+  display: none; /* Hidden on desktop, displayed via media query on mobile for customer portal */
+  justify-content: space-around;
+  align-items: center;
+  padding: 4px 6px;
+  padding-bottom: max(4px, env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 2px;
+  color: var(--ink);
+  text-decoration: none;
+  border-radius: 10px;
+  transition: all 0.15s ease;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.bottom-nav-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.bottom-nav-item.active-tab {
+  background: var(--lime);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  font-weight: 800;
+  transform: translateY(-2px);
+}
+
+.bottom-nav-item.active-tab .bottom-nav-icon {
+  color: var(--green);
+}
+
+.bottom-nav-item:active {
+  transform: scale(0.95);
+}
+
+/* Customer Portal Mobile Layout Overrides - No Sidebar, No Header Navbar, Fixed Bottom Nav */
+@media (max-width: 992px) {
+  body.customer-portal #sidebar-container,
+  body.customer-portal .portal-sidebar,
+  body.customer-portal #navbar-container,
+  body.customer-portal .portal-nav,
+  body.customer-portal #footer-container,
+  body.customer-portal .portal-footer,
+  body.customer-portal footer {
+    display: none !important;
+  }
+
+  body.customer-portal #mobile-toggle-btn {
+    display: none !important;
+  }
+
+  body.customer-portal .bottom-nav-streetside {
+    display: flex !important;
+  }
+
+  body.customer-portal .portal-main {
+    margin-left: 0 !important;
+    padding-top: 20px !important;
+    padding-bottom: 85px !important;
+  }
+}
+
+

@@ -1,8 +1,16 @@
 <?php
+/**
+ * Pikvero — Court Owner Onboarding Wizard
+ * High contrast Streetside aesthetic with solid white cards, bold black borders, and pricing-bg.png
+ */
 require_once __DIR__ . '/../app/bootstrap.php';
 use App\Core\Auth\Session;
 use App\Core\Database\Connection;
 use App\Infrastructure\Repositories\SystemSettingRepository;
+
+// Dynamic base path calculation for local & live deployments
+$reqUri   = $_SERVER['REQUEST_URI'] ?? '/';
+$basePath = (strpos($reqUri, '/pikvero') === 0) ? '/pikvero' : '';
 
 if (!Session::has('csrf_token')) {
     Session::set('csrf_token', bin2hex(random_bytes(32)));
@@ -39,221 +47,691 @@ if (empty($enabledPaymentMethods)) {
     $enabledPaymentMethods[] = $paymentChannelsMap['paymongo_enable_gcash'];
     $enabledPaymentMethods[] = $paymentChannelsMap['paymongo_enable_cards'];
 }
+
+$favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLogoUrl() : ($basePath . '/assets/images/logo.png');
 ?>
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>Pikvero — Court Owner Onboarding Wizard</title>
+  <meta name="description" content="Register your pickleball facility, configure courts and pricing, and launch your booking portal with Pikvero.">
+  
+  <link rel="icon" type="image/png" href="<?= htmlspecialchars($favLogo) ?>">
+  <link rel="shortcut icon" type="image/png" href="<?= htmlspecialchars($favLogo) ?>">
+  <link rel="apple-touch-icon" href="<?= htmlspecialchars($favLogo) ?>">
+  
+  <!-- Google Fonts: Plus Jakarta Sans, Outfit, DM Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@500;700;800&family=Outfit:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Bootstrap Icons & Toast CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <link rel="stylesheet" href="/pikvero/assets/css/streetside-theme.css?v=3">
-  <link rel="stylesheet" href="/pikvero/assets/css/toast.css">
+  <link rel="stylesheet" href="<?= $basePath ?>/assets/css/toast.css">
+
   <style>
-    .stepper-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
-      gap: 8px;
+    :root {
+      --ink: #0c1a15;
+      --dark-navy: #0c1a15;
+      --coral: #ff5733;
+      --coral-hover: #e04422;
+      --lime: #d4f82c;
+      --lime-hover: #c2e51f;
+      --sand: #f8fafc;
+      --green: #15803d;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: var(--dark-navy);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+      background: #f1f5f9 url('<?= $basePath ?>/assets/images/pricing-bg.png') no-repeat center top;
+      background-size: cover;
+      background-attachment: fixed;
+      display: flex;
+      flex-direction: column;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: rgba(241, 245, 249, 0.72);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Main Container ──────────────────────────────────────────────────────── */
+    .onboarding-page-wrap {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      flex: 1;
+      padding: 105px max(3vw, 16px) 60px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    /* ── Header Enclosing Card (For 100% Text Contrast) ─────────────────────── */
+    .onboarding-header-card {
+      background: #ffffff;
+      border: 2px solid #0c1a15;
+      border-radius: 20px;
+      box-shadow: 6px 6px 0 #0c1a15;
+      padding: 26px 28px 20px;
+      margin-bottom: 22px;
+    }
+
+    @media (max-width: 580px) {
+      .onboarding-header-card {
+        padding: 20px 18px 16px;
+        border-radius: 16px;
+        box-shadow: 4px 4px 0 #0c1a15;
+      }
+    }
+
+    .onboarding-top-bar {
+      margin-bottom: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .eyebrow-badge {
+      display: inline-block;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.74rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: #0c1a15;
+      color: #d4f82c;
+      padding: 4px 10px;
+      border-radius: 6px;
+      margin-bottom: 6px;
+    }
+
+    .onboarding-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(1.8rem, 3.8vw, 2.4rem);
+      font-weight: 900;
+      color: #0c1a15;
+      text-transform: uppercase;
+      line-height: 1.15;
+      margin: 0;
+    }
+
+    .onboarding-subtitle {
+      font-size: 0.88rem;
+      color: #1e293b;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+
+    .btn-reset-draft {
+      background: #ffffff;
+      border: 2px solid #0c1a15;
+      box-shadow: 2.5px 2.5px 0 #0c1a15;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: #0c1a15;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-reset-draft:hover {
+      background: #f1f5f9;
+      transform: translate(-1px, -1px);
+      box-shadow: 3.5px 3.5px 0 #0c1a15;
+    }
+
+    /* ── Progress Indicators ────────────────────────────────────────────────── */
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.76rem;
+      font-weight: 900;
+      color: #0c1a15;
+      letter-spacing: 0.02em;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      background: #e2e8f0;
+      border: 2px solid #0c1a15;
+      border-radius: 99px;
+      overflow: hidden;
       margin-bottom: 20px;
     }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #ff5733, #d4f82c);
+      width: 10%;
+      border-radius: 99px;
+      transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* ── 10-Step Horizontal Stepper ─────────────────────────────────────────── */
+    .stepper-container {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 6px;
+      margin-bottom: 4px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+
+    @media (max-width: 860px) {
+      .stepper-container {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .stepper-container {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 5px;
+      }
+    }
+
     .step-pill {
-      background: var(--white);
-      border: 2px solid var(--ink);
-      border-radius: 12px;
+      background: #f8fafc;
+      border: 2px solid #0c1a15;
+      border-radius: 10px;
       padding: 8px 4px;
       text-align: center;
       cursor: pointer;
       transition: all 0.2s ease;
-      box-shadow: 2px 2px 0 var(--ink);
+      box-shadow: 2px 2px 0 #0c1a15;
+      user-select: none;
     }
-    .step-pill.active {
-      background: var(--coral);
-      color: var(--white);
+
+    .step-pill:hover:not(.active) {
+      background: #ffffff;
       transform: translateY(-2px);
-      box-shadow: 3px 3px 0 var(--ink);
+      box-shadow: 3px 3px 0 #0c1a15;
     }
+
+    .step-pill.active {
+      background: #ff5733;
+      color: #ffffff;
+      transform: translateY(-2px);
+      box-shadow: 3px 3px 0 #0c1a15;
+    }
+
     .step-pill.completed {
-      background: var(--lime);
-      color: var(--ink);
+      background: #d4f82c;
+      color: #0c1a15;
+      box-shadow: 2px 2px 0 #0c1a15;
     }
+
     .step-pill-num {
-      font-weight: 800;
-      font-size: 0.88rem;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 900;
+      font-size: 0.92rem;
       display: block;
+      line-height: 1.1;
     }
+
+    .step-pill.completed .step-pill-num::after {
+      content: " ✓";
+      font-size: 0.72rem;
+      font-weight: 900;
+    }
+
     .step-pill-name {
       font-family: 'DM Mono', monospace;
       font-size: 0.62rem;
+      font-weight: 800;
       display: block;
       text-transform: uppercase;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      margin-top: 2px;
     }
-    .progress-track {
-      width: 100%;
-      height: 10px;
-      background: var(--sand);
-      border: 2px solid var(--ink);
-      border-radius: 10px;
-      overflow: hidden;
-      margin-bottom: 20px;
+
+    /* ── Main Wizard High Contrast Card Container ──────────────────────────── */
+    .onboarding-card {
+      background: #ffffff;
+      border: 2px solid #0c1a15;
+      border-radius: 20px;
+      box-shadow: 6px 6px 0 #0c1a15;
+      padding: 36px 34px 28px;
+      position: relative;
     }
-    .progress-fill {
-      height: 100%;
-      background: var(--lime);
-      width: 10%;
-      transition: width 0.3s ease;
+
+    @media (max-width: 640px) {
+      .onboarding-card {
+        padding: 24px 18px 20px;
+        border-radius: 16px;
+        box-shadow: 4px 4px 0 #0c1a15;
+      }
     }
+
     .wizard-step {
       display: none;
     }
+
     .wizard-step.active {
       display: block;
+      animation: fadeInStep 0.25s ease-out;
     }
+
+    @keyframes fadeInStep {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .step-title-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: #0c1a15;
+      text-transform: uppercase;
+      margin: 0 0 18px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #0c1a15;
+    }
+
+    .step-title-header i {
+      color: #ff5733;
+      font-size: 1.35rem;
+    }
+
+    /* ── Form Controls & Layout ─────────────────────────────────────────────── */
+    .form-row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    @media (max-width: 580px) {
+      .form-row-2 {
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+    }
+
+    .form-group-modern {
+      margin-bottom: 14px;
+      position: relative;
+    }
+
+    .form-label-modern {
+      display: block;
+      margin-bottom: 6px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #0c1a15;
+    }
+
+    .input-modern {
+      width: 100%;
+      height: 48px;
+      background: #ffffff;
+      border: 2px solid #0c1a15;
+      border-radius: 10px;
+      padding: 0 14px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #0c1a15;
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    .input-modern:focus {
+      border-color: #ff5733;
+      box-shadow: 0 0 0 3px rgba(255, 87, 51, 0.25);
+    }
+
+    .input-modern.is-valid {
+      border-color: #10b981 !important;
+      background-color: #f0fdf4;
+    }
+
+    .input-modern.is-invalid {
+      border-color: #ef4444 !important;
+      background-color: #fef2f2;
+    }
+
     .inline-feedback {
       font-family: 'DM Mono', monospace;
-      font-size: 0.72rem;
-      font-weight: 700;
+      font-size: 0.76rem;
+      font-weight: 800;
       margin-top: 4px;
-      min-height: 16px;
+      min-height: 18px;
+      display: block;
+      line-height: 1.2;
     }
+
     .inline-feedback.valid {
-      color: #10b981;
+      color: #047857;
     }
+
     .inline-feedback.invalid {
-      color: #ef4444;
+      color: #b91c1c;
     }
-    input.is-valid, select.is-valid {
-      border-color: #10b981 !important;
+
+    /* ── Modern Navigation Buttons ──────────────────────────────────────────── */
+    .wizard-nav-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 2px solid #0c1a15;
+      padding-top: 24px;
+      margin-top: 24px;
+      gap: 12px;
+      flex-wrap: wrap;
     }
-    input.is-invalid, select.is-invalid {
-      border-color: #ef4444 !important;
+
+    .btn-nav-prev {
+      background: #ffffff;
+      color: #0c1a15;
+      border: 2px solid #000000;
+      box-shadow: 3px 3px 0 #000000;
+      border-radius: 10px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.9rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      padding: 12px 20px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-nav-prev:hover {
+      background: #f1f5f9;
+      transform: translate(-1px, -1px);
+      box-shadow: 4px 4px 0 #000000;
+    }
+
+    .btn-nav-next {
+      background: #ff5733;
+      color: #ffffff;
+      border: 2px solid #000000;
+      box-shadow: 4px 4px 0 #000000;
+      border-radius: 10px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.9rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      padding: 12px 26px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+      transition: all 0.2s ease;
+    }
+
+    .btn-nav-next:hover {
+      background: #e04422;
+      transform: translate(-2px, -2px);
+      box-shadow: 6px 6px 0 #000000;
+    }
+
+    .btn-nav-submit {
+      background: #d4f82c;
+      color: #0c1a15;
+      border: 2px solid #000000;
+      box-shadow: 4px 4px 0 #000000;
+      border-radius: 10px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.95rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      padding: 12px 28px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+      transition: all 0.2s ease;
+    }
+
+    .btn-nav-submit:hover {
+      background: #c2e51f;
+      transform: translate(-2px, -2px);
+      box-shadow: 6px 6px 0 #000000;
+    }
+
+    /* ── Upload Dropzone ─────────────────────────────────────────────────────── */
+    .dropzone-box {
+      background: #f8fafc;
+      border: 2px dashed #0c1a15;
+      border-radius: 16px;
+      padding: 32px 20px;
+      text-align: center;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .dropzone-box:hover {
+      border-color: #ff5733;
+      background: #fffaf0;
+    }
+
+    /* ── Subscription Plan Cards ────────────────────────────────────────────── */
+    .sub-plans-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .sub-plan-card {
+      background: #ffffff;
+      border: 2px solid #0c1a15;
+      box-shadow: 3px 3px 0 #0c1a15;
+      border-radius: 16px;
+      padding: 22px;
+      cursor: pointer;
+      display: block;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+
+    .sub-plan-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 5px 5px 0 #0c1a15;
+    }
+
+    .sub-plan-card.selected {
+      background: #fffaf0;
+      border: 3px solid #ff5733 !important;
+      transform: translateY(-4px);
+      box-shadow: 6px 6px 0 #0c1a15 !important;
+    }
+
+    /* ── Receipts and Info Boxes ────────────────────────────────────────────── */
+    .info-callout {
+      background: #eff6ff;
+      border: 2px solid #0c1a15;
+      box-shadow: 2px 2px 0 #0c1a15;
+      border-radius: 12px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .info-callout i {
+      font-size: 1.3rem;
+      color: #0284c7;
+      flex-shrink: 0;
     }
   </style>
 </head>
 <body>
 
+  <!-- Dynamic Edge-to-Edge Fixed Header -->
   <?php require_once __DIR__ . '/../includes/header.php'; ?>
 
-  <div style="padding:110px max(4vw, 20px) 60px; max-width:860px; margin:0 auto;">
-    <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;">
-      <div>
-        <div class="eyebrow">SAAS PLATFORM ONBOARDING</div>
-        <h1 style="font-size:clamp(1.8rem, 4vw, 2.6rem); font-weight:800; text-transform:uppercase; margin:4px 0 0;">BECOME A COURT OWNER</h1>
-        <p style="font-size:0.88rem; color:#3b4e48; margin:2px 0 0;">Complete the 10-step wizard to register your facility and publish courts for bookings.</p>
+  <main class="onboarding-page-wrap">
+    
+    <!-- Header Enclosing Card (Guarantees Sharp Contrast) -->
+    <div class="onboarding-header-card">
+      <div class="onboarding-top-bar">
+        <div>
+          <span class="eyebrow-badge">SAAS PLATFORM ONBOARDING</span>
+          <h1 class="onboarding-title">BECOME A COURT OWNER</h1>
+          <p class="onboarding-subtitle">Complete the 10-step wizard to register your facility and publish courts for bookings.</p>
+        </div>
+        <button type="button" onclick="clearOnboardingDraft()" class="btn-reset-draft">
+          <i class="bi bi-trash"></i> Reset Draft
+        </button>
       </div>
-      <button type="button" onclick="clearOnboardingDraft()" class="button sand" style="padding:6px 12px; font-size:0.75rem; color:var(--ink);">
-        <i class="bi bi-trash"></i> Reset Draft
-      </button>
+
+      <!-- Progress Metadata -->
+      <div class="progress-meta">
+        <span id="progress-step-text">STEP 1 OF 10: OWNER ACCOUNT SETUP</span>
+        <span id="progress-percent-text">10% COMPLETE</span>
+      </div>
+      
+      <!-- Animated Progress Bar -->
+      <div class="progress-track">
+        <div id="progress-fill" class="progress-fill"></div>
+      </div>
+
+      <!-- Stepper 10-Step Grid Pills -->
+      <div class="stepper-container" id="stepper-pills">
+        <div class="step-pill active" onclick="jumpToStep(1)" id="pill-1">
+          <span class="step-pill-num">1</span>
+          <span class="step-pill-name">Account</span>
+        </div>
+        <div class="step-pill" onclick="jumpToStep(2)" id="pill-2">
+          <span class="step-pill-num">2</span>
+          <span class="step-pill-name">Business</span>
+        </div>
+        <div class="step-pill" onclick="jumpToStep(3)" id="pill-3">
+          <span class="step-pill-num">3</span>
+          <span class="step-pill-name">Facility</span>
+        </div>
+        <div class="step-pill" onclick="jumpToStep(4)" id="pill-4">
+          <span class="step-pill-num">4</span>
+          <span class="step-pill-name">Docs</span>
+        </div>
+        <div class="step-pill" onclick="jumpToStep(5)" id="pill-5">
+          <span class="step-pill-num">5</span>
+          <span class="step-pill-name">Courts</span>
+        </div>
+        <div class="step-pill" onclick="jumpToStep(6)" id="pill-6">
+          <span class="step-pill-num">6</span>
+          <span class="step-pill-name">Pricing</span>
+        </div>
+        <div class="step-pill" onclick="jumpToStep(7)" id="pill-7">
+          <span class="step-pill-num">7</span>
+          <span class="step-pill-name">Hours</span>
+        </div>
+        <div class="step-pill" onclick="jumpToStep(8)" id="pill-8">
+          <span class="step-pill-num">8</span>
+          <span class="step-pill-name">Plan</span>
+        </div>
+        <div class="step-pill" onclick="jumpToStep(9)" id="pill-9">
+          <span class="step-pill-num">9</span>
+          <span class="step-pill-name">Payment</span>
+        </div>
+        <div class="step-pill" onclick="jumpToStep(10)" id="pill-10">
+          <span class="step-pill-num">10</span>
+          <span class="step-pill-name">Submit</span>
+        </div>
+      </div>
     </div>
 
-    <!-- Overall Progress Header -->
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-family:'DM Mono', monospace; font-size:0.75rem; font-weight:700;">
-      <span id="progress-step-text">STEP 1 OF 10: OWNER ACCOUNT SETUP</span>
-      <span id="progress-percent-text">10% COMPLETE</span>
-    </div>
-    <div class="progress-track">
-      <div id="progress-fill" class="progress-fill"></div>
-    </div>
-
-    <!-- Stepper 10-Step Grid Pills -->
-    <div class="stepper-container" id="stepper-pills">
-      <div class="step-pill active" onclick="jumpToStep(1)" id="pill-1">
-        <span class="step-pill-num">1</span>
-        <span class="step-pill-name">Account</span>
-      </div>
-      <div class="step-pill" onclick="jumpToStep(2)" id="pill-2">
-        <span class="step-pill-num">2</span>
-        <span class="step-pill-name">Business</span>
-      </div>
-      <div class="step-pill" onclick="jumpToStep(3)" id="pill-3">
-        <span class="step-pill-num">3</span>
-        <span class="step-pill-name">Facility</span>
-      </div>
-      <div class="step-pill" onclick="jumpToStep(4)" id="pill-4">
-        <span class="step-pill-num">4</span>
-        <span class="step-pill-name">Docs</span>
-      </div>
-      <div class="step-pill" onclick="jumpToStep(5)" id="pill-5">
-        <span class="step-pill-num">5</span>
-        <span class="step-pill-name">Courts</span>
-      </div>
-      <div class="step-pill" onclick="jumpToStep(6)" id="pill-6">
-        <span class="step-pill-num">6</span>
-        <span class="step-pill-name">Pricing</span>
-      </div>
-      <div class="step-pill" onclick="jumpToStep(7)" id="pill-7">
-        <span class="step-pill-num">7</span>
-        <span class="step-pill-name">Hours</span>
-      </div>
-      <div class="step-pill" onclick="jumpToStep(8)" id="pill-8">
-        <span class="step-pill-num">8</span>
-        <span class="step-pill-name">Plan</span>
-      </div>
-      <div class="step-pill" onclick="jumpToStep(9)" id="pill-9">
-        <span class="step-pill-num">9</span>
-        <span class="step-pill-name">Payment</span>
-      </div>
-      <div class="step-pill" onclick="jumpToStep(10)" id="pill-10">
-        <span class="step-pill-num">10</span>
-        <span class="step-pill-name">Submit</span>
-      </div>
-    </div>
-
-    <!-- Wizard Card Container -->
-    <div class="card-streetside" style="padding:32px; background:var(--white);">
+    <!-- Main Wizard Frosted Card Container -->
+    <div class="onboarding-card">
       <form id="onboarding-wizard-form" novalidate>
         <input type="hidden" id="csrf_token" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
 
         <!-- STEP 1: CREATE ACCOUNT -->
         <div class="wizard-step active" id="step-1">
-          <h3 style="font-size:1.2rem; font-weight:800; text-transform:uppercase; margin:0 0 14px;"><i class="bi bi-person-circle"></i> STEP 1: OWNER ACCOUNT SETUP</h3>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div class="step-title-header">
+            <i class="bi bi-person-circle"></i>
+            <span>STEP 1: OWNER ACCOUNT SETUP</span>
+          </div>
+
+          <div class="form-row-2">
             <div>
-              <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">FIRST NAME *</label>
-              <input type="text" id="ob-fname" placeholder="Marcus" style="width:100%; padding:10px; border:2px solid var(--ink); border-radius:10px; font-family:inherit; font-weight:700;">
+              <label class="form-label-modern" for="ob-fname">FIRST NAME *</label>
+              <input type="text" id="ob-fname" class="input-modern" placeholder="Marcus">
               <div id="fb-fname" class="inline-feedback"></div>
             </div>
             <div>
-              <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">LAST NAME *</label>
-              <input type="text" id="ob-lname" placeholder="Vance" style="width:100%; padding:10px; border:2px solid var(--ink); border-radius:10px; font-family:inherit; font-weight:700;">
+              <label class="form-label-modern" for="ob-lname">LAST NAME *</label>
+              <input type="text" id="ob-lname" class="input-modern" placeholder="Vance">
               <div id="fb-lname" class="inline-feedback"></div>
             </div>
           </div>
 
-          <div style="margin-bottom:12px;">
-            <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">USERNAME *</label>
-            <input type="text" id="ob-username" placeholder="owner" style="width:100%; padding:10px; border:2px solid var(--ink); border-radius:10px; font-family:inherit; font-weight:700;">
+          <div class="form-group-modern">
+            <label class="form-label-modern" for="ob-username">USERNAME *</label>
+            <input type="text" id="ob-username" class="input-modern" placeholder="marcus_owner">
             <div id="fb-username" class="inline-feedback"></div>
           </div>
 
-          <div style="margin-bottom:12px;">
-            <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">EMAIL ADDRESS *</label>
-            <input type="email" id="ob-email" placeholder="owner@smashzone.com" style="width:100%; padding:10px; border:2px solid var(--ink); border-radius:10px; font-family:inherit; font-weight:700;">
+          <div class="form-group-modern">
+            <label class="form-label-modern" for="ob-email">EMAIL ADDRESS *</label>
+            <input type="email" id="ob-email" class="input-modern" placeholder="owner@smashzone.com">
             <div id="fb-email" class="inline-feedback"></div>
           </div>
 
-          <div style="margin-bottom:12px;">
-            <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">PHONE NUMBER (11 DIGITS) *</label>
-            <input type="text" id="ob-phone" maxlength="11" placeholder="09181112222" style="width:100%; padding:10px; border:2px solid var(--ink); border-radius:10px; font-family:inherit; font-weight:700;">
+          <div class="form-group-modern">
+            <label class="form-label-modern" for="ob-phone">PHONE NUMBER (11 DIGITS) *</label>
+            <input type="text" id="ob-phone" class="input-modern" maxlength="11" placeholder="09181112222">
             <div id="fb-phone" class="inline-feedback"></div>
           </div>
 
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+          <div class="form-row-2">
             <div>
-              <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">PASSWORD *</label>
+              <label class="form-label-modern" for="ob-pass">PASSWORD *</label>
               <div style="position:relative;">
-                <input type="password" id="ob-pass" autocomplete="new-password" placeholder="••••••••" style="width:100%; padding:10px 36px 10px 10px; border:2px solid var(--ink); border-radius:10px; font-family:inherit; font-weight:700;">
-                <i class="bi bi-eye-slash-fill" id="toggle-ob-pass" onclick="togglePassVisibility('ob-pass', 'toggle-ob-pass')" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); cursor:pointer; color:#6b7c76;"></i>
+                <input type="password" id="ob-pass" class="input-modern" autocomplete="new-password" placeholder="••••••••" style="padding-right:40px;">
+                <i class="bi bi-eye-slash-fill" id="toggle-ob-pass" onclick="togglePassVisibility('ob-pass', 'toggle-ob-pass')" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); cursor:pointer; color:#0c1a15; font-size:1.15rem;"></i>
               </div>
               <div id="fb-pass" class="inline-feedback"></div>
             </div>
             <div>
-              <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">CONFIRM PASSWORD *</label>
+              <label class="form-label-modern" for="ob-cpass">CONFIRM PASSWORD *</label>
               <div style="position:relative;">
-                <input type="password" id="ob-cpass" autocomplete="new-password" placeholder="••••••••" style="width:100%; padding:10px 36px 10px 10px; border:2px solid var(--ink); border-radius:10px; font-family:inherit; font-weight:700;">
-                <i class="bi bi-eye-slash-fill" id="toggle-ob-cpass" onclick="togglePassVisibility('ob-cpass', 'toggle-ob-cpass')" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); cursor:pointer; color:#6b7c76;"></i>
+                <input type="password" id="ob-cpass" class="input-modern" autocomplete="new-password" placeholder="••••••••" style="padding-right:40px;">
+                <i class="bi bi-eye-slash-fill" id="toggle-ob-cpass" onclick="togglePassVisibility('ob-cpass', 'toggle-ob-cpass')" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); cursor:pointer; color:#0c1a15; font-size:1.15rem;"></i>
               </div>
               <div id="fb-cpass" class="inline-feedback"></div>
             </div>
@@ -262,41 +740,49 @@ if (empty($enabledPaymentMethods)) {
 
         <!-- STEP 2: BUSINESS INFORMATION -->
         <div class="wizard-step" id="step-2">
-          <h3 style="font-size:1.2rem; font-weight:800; text-transform:uppercase; margin:0 0 14px;"><i class="bi bi-briefcase-fill"></i> STEP 2: BUSINESS INFORMATION</h3>
-          <div style="margin-bottom:12px;">
-            <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">ORGANIZATION / CLUB NAME *</label>
-            <input type="text" id="ob-orgname" placeholder="SmashZone Pickleball Club" style="width:100%; padding:10px; border:2px solid var(--ink); border-radius:10px; font-family:inherit; font-weight:700;">
+          <div class="step-title-header">
+            <i class="bi bi-briefcase-fill"></i>
+            <span>STEP 2: BUSINESS INFORMATION</span>
+          </div>
+
+          <div class="form-group-modern">
+            <label class="form-label-modern" for="ob-orgname">ORGANIZATION / CLUB NAME *</label>
+            <input type="text" id="ob-orgname" class="input-modern" placeholder="SmashZone Pickleball Club">
             <div id="fb-orgname" class="inline-feedback"></div>
           </div>
-          <div style="margin-bottom:16px;">
-            <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">BUSINESS PERMIT / DTI / SEC REGISTRATION # *</label>
-            <input type="text" id="ob-taxid" placeholder="DTI-2026-998877" style="width:100%; padding:10px; border:2px solid var(--ink); border-radius:10px; font-family:inherit; font-weight:700;">
+          <div class="form-group-modern">
+            <label class="form-label-modern" for="ob-taxid">BUSINESS PERMIT / DTI / SEC REGISTRATION # *</label>
+            <input type="text" id="ob-taxid" class="input-modern" placeholder="DTI-2026-998877">
             <div id="fb-taxid" class="inline-feedback"></div>
           </div>
         </div>
 
         <!-- STEP 3: FACILITY INFORMATION -->
         <div class="wizard-step" id="step-3">
-          <h3 style="font-size:1.2rem; font-weight:800; text-transform:uppercase; margin:0 0 14px;"><i class="bi bi-building"></i> STEP 3: FACILITY DETAILS</h3>
-          <div style="margin-bottom:12px;">
-            <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">FACILITY NAME *</label>
-            <input type="text" id="ob-facname" placeholder="SmashZone Pickleball Center" style="width:100%; padding:10px; border:2px solid var(--ink); border-radius:10px; font-family:inherit; font-weight:700;">
+          <div class="step-title-header">
+            <i class="bi bi-building"></i>
+            <span>STEP 3: FACILITY DETAILS</span>
+          </div>
+
+          <div class="form-group-modern">
+            <label class="form-label-modern" for="ob-facname">FACILITY NAME *</label>
+            <input type="text" id="ob-facname" class="input-modern" placeholder="SmashZone Pickleball Center">
             <div id="fb-facname" class="inline-feedback"></div>
           </div>
-          <div style="margin-bottom:12px;">
-            <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">STREET ADDRESS *</label>
-            <input type="text" id="ob-address" placeholder="CPG North Avenue" style="width:100%; padding:10px; border:2px solid var(--ink); border-radius:10px; font-family:inherit; font-weight:700;">
+          <div class="form-group-modern">
+            <label class="form-label-modern" for="ob-address">STREET ADDRESS *</label>
+            <input type="text" id="ob-address" class="input-modern" placeholder="CPG North Avenue">
             <div id="fb-address" class="inline-feedback"></div>
           </div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;">
+          <div class="form-row-2">
             <div>
-              <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">CITY *</label>
-              <input type="text" id="ob-city" placeholder="Tagbilaran City" style="width:100%; padding:10px; border:2px solid var(--ink); border-radius:10px; font-family:inherit; font-weight:700;">
+              <label class="form-label-modern" for="ob-city">CITY *</label>
+              <input type="text" id="ob-city" class="input-modern" placeholder="Tagbilaran City">
               <div id="fb-city" class="inline-feedback"></div>
             </div>
             <div>
-              <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">PROVINCE *</label>
-              <input type="text" id="ob-province" placeholder="Bohol" style="width:100%; padding:10px; border:2px solid var(--ink); border-radius:10px; font-family:inherit; font-weight:700;">
+              <label class="form-label-modern" for="ob-province">PROVINCE *</label>
+              <input type="text" id="ob-province" class="input-modern" placeholder="Bohol">
               <div id="fb-province" class="inline-feedback"></div>
             </div>
           </div>
@@ -304,33 +790,47 @@ if (empty($enabledPaymentMethods)) {
 
         <!-- STEP 4: UPLOAD DOCUMENTS -->
         <div class="wizard-step" id="step-4">
-          <h3 style="font-size:1.2rem; font-weight:800; text-transform:uppercase; margin:0 0 14px;"><i class="bi bi-file-earmark-text"></i> STEP 4: VERIFICATION DOCUMENTS</h3>
-          <div class="card-streetside sand" style="padding:24px; text-align:center; margin-bottom:16px;">
-            <i class="bi bi-cloud-arrow-up-fill" style="font-size:2.5rem; color:var(--green);"></i>
-            <div class="mono" style="font-size:0.82rem; font-weight:700; margin-top:8px;">Upload Business Permit / Government Valid ID</div>
-            <p style="font-size:0.78rem; color:#4a5c56; margin:4px 0 12px;">Accepted formats: PDF, PNG, JPG (Max 5MB)</p>
-            <input type="file" id="ob-docs" accept=".pdf,.png,.jpg,.jpeg">
-            <div id="fb-docs" class="inline-feedback" style="margin-top:8px;"></div>
+          <div class="step-title-header">
+            <i class="bi bi-file-earmark-text"></i>
+            <span>STEP 4: VERIFICATION DOCUMENTS</span>
+          </div>
+
+          <div class="dropzone-box" onclick="document.getElementById('ob-docs').click()">
+            <i class="bi bi-cloud-arrow-up-fill" style="font-size:2.8rem; color:#15803d;"></i>
+            <div style="font-family:'DM Mono', monospace; font-size:0.9rem; font-weight:900; margin-top:10px; color:#0c1a15;">
+              Upload Business Permit or Government Valid ID
+            </div>
+            <p style="font-size:0.85rem; color:#334155; font-weight:600; margin:4px 0 14px;">Accepted formats: PDF, PNG, JPG (Max 5MB)</p>
+            <input type="file" id="ob-docs" accept=".pdf,.png,.jpg,.jpeg" style="display:none;">
+            <button type="button" class="btn-reset-draft" style="background:#ffffff; margin:0 auto;">
+              <i class="bi bi-folder2-open"></i> Browse Files
+            </button>
+            <div id="fb-docs" class="inline-feedback" style="margin-top:10px;"></div>
           </div>
         </div>
 
         <!-- STEP 5: ADD COURTS -->
         <div class="wizard-step" id="step-5">
-          <h3 style="font-size:1.2rem; font-weight:800; text-transform:uppercase; margin:0 0 14px;"><i class="bi bi-layers-fill"></i> STEP 5: INITIAL COURTS SETUP</h3>
+          <div class="step-title-header">
+            <i class="bi bi-layers-fill"></i>
+            <span>STEP 5: INITIAL COURTS SETUP</span>
+          </div>
           
-          <div class="card-streetside sand" style="padding:12px 16px; margin-bottom:14px; border-left:4px solid var(--green); display:flex; align-items:center; gap:10px;">
-            <i class="bi bi-info-circle-fill" style="font-size:1.2rem; color:var(--green);"></i>
-            <span class="mono" style="font-size:0.78rem; font-weight:700; color:var(--ink);">NOTE: You can add more courts based on your selected package.</span>
+          <div class="info-callout">
+            <i class="bi bi-info-circle-fill"></i>
+            <span style="font-family:'DM Mono', monospace; font-size:0.82rem; font-weight:800; color:#0c1a15;">
+              NOTE: You can add more courts and manage layouts from your Owner Dashboard after registration.
+            </span>
           </div>
 
-          <div style="margin-bottom:12px;">
-            <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">COURT NAME *</label>
-            <input type="text" id="ob-courtname" placeholder="Court 1 - Pro Championship" style="width:100%; padding:10px; border:2px solid var(--ink); border-radius:10px; font-family:inherit; font-weight:700;">
+          <div class="form-group-modern">
+            <label class="form-label-modern" for="ob-courtname">COURT NAME *</label>
+            <input type="text" id="ob-courtname" class="input-modern" placeholder="Court 1 - Pro Championship">
             <div id="fb-courtname" class="inline-feedback"></div>
           </div>
-          <div style="margin-bottom:16px;">
-            <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">SURFACE TYPE</label>
-            <select id="ob-courttype" style="width:100%; padding:10px; border:2px solid var(--ink); border-radius:10px; font-family:inherit; font-weight:700;">
+          <div class="form-group-modern">
+            <label class="form-label-modern" for="ob-courttype">SURFACE TYPE</label>
+            <select id="ob-courttype" class="input-modern" style="cursor:pointer;">
               <option value="indoor">Indoor Cushioned Acrylic</option>
               <option value="outdoor">Outdoor Acrylic</option>
               <option value="covered">Covered Polyurethane</option>
@@ -340,78 +840,90 @@ if (empty($enabledPaymentMethods)) {
 
         <!-- STEP 6: CONFIGURE PRICING -->
         <div class="wizard-step" id="step-6">
-          <h3 style="font-size:1.2rem; font-weight:800; text-transform:uppercase; margin:0 0 14px;"><i class="bi bi-tag-fill"></i> STEP 6: CONFIGURE COURT PRICING</h3>
-          <div style="margin-bottom:16px;">
-            <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">BASE RATE PER HOUR (₱) *</label>
-            <input type="number" id="ob-price" placeholder="450.00" style="width:100%; padding:10px; border:2px solid var(--ink); border-radius:10px; font-family:inherit; font-weight:700;">
+          <div class="step-title-header">
+            <i class="bi bi-tag-fill"></i>
+            <span>STEP 6: CONFIGURE COURT PRICING</span>
+          </div>
+
+          <div class="form-group-modern">
+            <label class="form-label-modern" for="ob-price">BASE RATE PER HOUR (₱) *</label>
+            <input type="number" id="ob-price" class="input-modern" placeholder="450.00" step="10">
             <div id="fb-price" class="inline-feedback"></div>
           </div>
         </div>
 
         <!-- STEP 7: OPERATING HOURS & AVAILABILITY -->
         <div class="wizard-step" id="step-7">
-          <h3 style="font-size:1.2rem; font-weight:800; text-transform:uppercase; margin:0 0 14px;"><i class="bi bi-clock-fill"></i> STEP 7: OPERATING HOURS</h3>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;">
+          <div class="step-title-header">
+            <i class="bi bi-clock-fill"></i>
+            <span>STEP 7: OPERATING HOURS</span>
+          </div>
+
+          <div class="form-row-2">
             <div>
-              <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">OPEN TIME</label>
-              <input type="time" id="ob-opentime" value="06:00" style="width:100%; padding:10px; border:2px solid var(--ink); border-radius:10px; font-family:inherit; font-weight:700;">
+              <label class="form-label-modern" for="ob-opentime">OPEN TIME</label>
+              <input type="time" id="ob-opentime" value="06:00" class="input-modern">
             </div>
             <div>
-              <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">CLOSE TIME</label>
-              <input type="time" id="ob-closetime" value="22:00" style="width:100%; padding:10px; border:2px solid var(--ink); border-radius:10px; font-family:inherit; font-weight:700;">
+              <label class="form-label-modern" for="ob-closetime">CLOSE TIME</label>
+              <input type="time" id="ob-closetime" value="22:00" class="input-modern">
             </div>
           </div>
         </div>
 
         <!-- STEP 8: PLATFORM SUBSCRIPTION -->
         <div class="wizard-step" id="step-8">
-          <h3 style="font-size:1.2rem; font-weight:800; text-transform:uppercase; margin:0 0 10px;"><i class="bi bi-award-fill"></i> STEP 8: CHOOSE SAAS SUBSCRIPTION</h3>
-          <p style="font-size:0.85rem; color:#3b4e48; margin-bottom:16px;">Select the platform package that fits your facility operations. Click a plan to review the full payment breakdown.</p>
+          <div class="step-title-header">
+            <i class="bi bi-award-fill"></i>
+            <span>STEP 8: CHOOSE SAAS SUBSCRIPTION</span>
+          </div>
+          <p style="font-size:0.9rem; color:#1e293b; margin-bottom:18px; font-weight:700;">
+            Select the platform package that fits your facility operations. Click a plan to review the full payment breakdown.
+          </p>
 
-          <div id="subscription-plans-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:16px; margin-bottom:16px;">
+          <div id="subscription-plans-grid" class="sub-plans-grid">
             <?php foreach ($subscriptionPlans as $index => $plan): ?>
               <?php
                 $isDefault = ($index === 0);
                 $slug = $plan['slug'] ?? strtolower(explode(' ', $plan['name'])[0]);
-                $bgStyle = $isDefault ? 'background:var(--sand); border:3px solid var(--coral); transform:translateY(-4px); box-shadow:4px 4px 0 var(--ink);' : 'background:var(--white); border:2px solid var(--ink);';
               ?>
-              <label id="plan-card-<?= htmlspecialchars($slug) ?>" class="card-streetside sub-plan-card <?= $isDefault ? 'selected' : '' ?>" onclick="selectSubPlan('<?= htmlspecialchars($slug) ?>')" style="padding:20px; cursor:pointer; display:block; position:relative; transition:all 0.25s ease; <?= $bgStyle ?>">
+              <label id="plan-card-<?= htmlspecialchars($slug) ?>" class="sub-plan-card <?= $isDefault ? 'selected' : '' ?>" onclick="selectSubPlan('<?= htmlspecialchars($slug) ?>')">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <span class="mono badge-selected" style="<?= $isDefault ? 'display:inline-block;' : 'display:none;' ?> background:var(--coral); color:var(--white); font-size:0.68rem; font-weight:800; padding:3px 8px; border-radius:6px;">✓ SELECTED PLAN</span>
-                  <input type="radio" name="sub_plan" value="<?= htmlspecialchars($slug) ?>" <?= $isDefault ? 'checked' : '' ?> style="transform:scale(1.3); accent-color:var(--coral);">
+                  <span class="badge-selected" style="<?= $isDefault ? 'display:inline-block;' : 'display:none;' ?> background:#ff5733; color:#ffffff; font-family:'DM Mono', monospace; font-size:0.72rem; font-weight:900; padding:4px 8px; border-radius:6px; border:1px solid #000;">✓ SELECTED PLAN</span>
+                  <input type="radio" name="sub_plan" value="<?= htmlspecialchars($slug) ?>" <?= $isDefault ? 'checked' : '' ?> style="transform:scale(1.3); accent-color:#ff5733;">
                 </div>
-                <strong style="display:block; margin-top:12px; font-size:1.25rem;"><?= htmlspecialchars($plan['name']) ?></strong>
-                <div style="font-size:1.4rem; font-weight:900; color:var(--green); margin:4px 0 8px;">₱<?= number_format($plan['monthly_price'], 2) ?> <span style="font-size:0.78rem; font-weight:600; color:#3b4e48;">/ month</span></div>
-                <p style="font-size:0.78rem; color:#4b5c56; margin:0 0 10px; font-weight:600;"><?= htmlspecialchars($plan['description'] ?? '') ?></p>
+                <strong style="display:block; margin-top:10px; font-family:'Outfit', sans-serif; font-size:1.4rem; font-weight:900; color:#0c1a15;"><?= htmlspecialchars($plan['name']) ?></strong>
+                <div style="font-family:'Outfit', sans-serif; font-size:1.6rem; font-weight:900; color:#15803d; margin:4px 0 6px;">₱<?= number_format($plan['monthly_price'], 2) ?> <span style="font-family:'Plus Jakarta Sans', sans-serif; font-size:0.8rem; font-weight:700; color:#475569;">/ month</span></div>
+                <p style="font-size:0.82rem; color:#334155; margin:0 0 12px; font-weight:600; line-height:1.4;"><?= htmlspecialchars($plan['description'] ?? '') ?></p>
                 
-                <div style="border-top:1px dashed var(--ink); padding-top:10px; margin-top:10px;">
-                  <div class="mono" style="font-size:0.68rem; font-weight:800; text-transform:uppercase; color:var(--green); margin-bottom:6px;">PLAN INCLUSIONS:</div>
-                  <ul style="font-size:0.78rem; color:#1d2925; list-style:none; padding:0; margin:0; line-height:1.6;">
+                <div style="border-top:2px dashed #0c1a15; padding-top:10px; margin-top:10px;">
+                  <div style="font-family:'DM Mono', monospace; font-size:0.72rem; font-weight:900; text-transform:uppercase; color:#15803d; margin-bottom:6px;">PLAN INCLUSIONS:</div>
+                  <ul style="font-size:0.82rem; color:#0c1a15; font-weight:700; list-style:none; padding:0; margin:0; line-height:1.6;">
                     <?php if (!empty($plan['features'])): ?>
                       <?php foreach ($plan['features'] as $feat): ?>
                         <li style="display:flex; align-items:center; gap:6px;">
-                          <i class="bi bi-check-circle-fill" style="color:var(--green); font-size:0.85rem;"></i>
+                          <i class="bi bi-check-circle-fill" style="color:#15803d; font-size:0.9rem;"></i>
                           <span><?= htmlspecialchars($feat) ?></span>
                         </li>
                       <?php endforeach; ?>
                     <?php else: ?>
                       <li style="display:flex; align-items:center; gap:6px;">
-                        <i class="bi bi-check-circle-fill" style="color:var(--green); font-size:0.85rem;"></i>
+                        <i class="bi bi-check-circle-fill" style="color:#15803d; font-size:0.9rem;"></i>
                         <span><?= (int)$plan['max_facilities'] >= 90 ? 'Unlimited' : (int)$plan['max_facilities'] ?> Facility Location(s)</span>
                       </li>
                       <li style="display:flex; align-items:center; gap:6px;">
-                        <i class="bi bi-check-circle-fill" style="color:var(--green); font-size:0.85rem;"></i>
+                        <i class="bi bi-check-circle-fill" style="color:#15803d; font-size:0.9rem;"></i>
                         <span>Up to <?= (int)$plan['max_courts'] >= 500 ? 'Unlimited' : (int)$plan['max_courts'] ?> Courts</span>
                       </li>
                       <li style="display:flex; align-items:center; gap:6px;">
-                        <i class="bi bi-check-circle-fill" style="color:var(--green); font-size:0.85rem;"></i>
+                        <i class="bi bi-check-circle-fill" style="color:#15803d; font-size:0.9rem;"></i>
                         <span><?= (int)$plan['max_staff'] ?> Staff Account(s) Included</span>
                       </li>
                     <?php endif; ?>
                   </ul>
                 </div>
 
-                <button type="button" onclick="event.stopPropagation(); selectSubPlan('<?= htmlspecialchars($slug) ?>'); openPaymentModal('<?= htmlspecialchars($slug) ?>');" class="button coral" style="width:100%; margin-top:16px; padding:10px; font-size:0.82rem; font-weight:800; display:flex; align-items:center; justify-content:center; gap:6px;">
+                <button type="button" onclick="event.stopPropagation(); selectSubPlan('<?= htmlspecialchars($slug) ?>'); openPaymentModal('<?= htmlspecialchars($slug) ?>');" class="btn-nav-next" style="width:100%; margin-top:16px; padding:10px; font-size:0.85rem; justify-content:center;">
                   <i class="bi bi-credit-card-fill"></i> Select Plan &amp; Review Payment
                 </button>
               </label>
@@ -421,42 +933,49 @@ if (empty($enabledPaymentMethods)) {
 
         <!-- STEP 9: SUBSCRIPTION PAYMENT RECEIPT -->
         <div class="wizard-step" id="step-9">
-          <h3 style="font-size:1.2rem; font-weight:800; text-transform:uppercase; margin:0 0 14px;"><i class="bi bi-receipt"></i> STEP 9: SUBSCRIPTION PAYMENT RECEIPT</h3>
+          <div class="step-title-header">
+            <i class="bi bi-receipt"></i>
+            <span>STEP 9: SUBSCRIPTION PAYMENT RECEIPT</span>
+          </div>
           
-          <div id="s9-payment-pending-box" class="card-streetside sand" style="display:block; padding:24px; text-align:center; border:2px solid var(--ink); margin-bottom:16px;">
-            <i class="bi bi-exclamation-circle-fill" style="font-size:2.5rem; color:var(--coral);"></i>
-            <h4 style="font-size:1.15rem; font-weight:900; margin:10px 0 6px; text-transform:uppercase;">PAYMENT NOT YET COMPLETED</h4>
-            <p style="font-size:0.85rem; color:#4a5c56; margin-bottom:16px; line-height:1.4;">Please select your desired subscription plan in Step 8 and confirm the payment breakdown to proceed.</p>
-            <button type="button" onclick="jumpToStep(8); openPaymentModalCurrent();" class="button coral" style="padding:10px 22px; font-size:0.85rem; font-weight:800;">
+          <div id="s9-payment-pending-box" style="display:block; padding:32px 20px; text-align:center; background:#fffaf0; border:2px dashed #0c1a15; border-radius:16px; margin-bottom:16px;">
+            <i class="bi bi-exclamation-circle-fill" style="font-size:2.8rem; color:#ff5733;"></i>
+            <h4 style="font-family:'Outfit', sans-serif; font-size:1.3rem; font-weight:900; margin:12px 0 6px; text-transform:uppercase; color:#0c1a15;">PAYMENT NOT YET COMPLETED</h4>
+            <p style="font-size:0.88rem; color:#1e293b; font-weight:600; margin-bottom:18px; line-height:1.45;">Please select your desired subscription plan in Step 8 and confirm the payment breakdown to proceed.</p>
+            <button type="button" onclick="jumpToStep(8); openPaymentModalCurrent();" class="btn-nav-next" style="display:inline-flex; margin:0 auto;">
               <i class="bi bi-credit-card"></i> Complete Payment in Step 8 &rarr;
             </button>
           </div>
 
           <div id="s9-payment-success-box" style="display:none;">
-            <div class="card-streetside" style="padding:20px; background:#dcfce7; border:2px solid var(--ink); margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+            <div style="padding:20px; background:#dcfce7; border:2px solid #0c1a15; box-shadow:3px 3px 0 #0c1a15; border-radius:14px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
               <div style="display:flex; align-items:center; gap:12px;">
-                <i class="bi bi-patch-check-fill" style="font-size:2.2rem; color:#15803d;"></i>
+                <i class="bi bi-patch-check-fill" style="font-size:2.4rem; color:#15803d;"></i>
                 <div>
-                  <strong style="font-size:1.05rem; display:block; color:#14532d; font-weight:900;">PAYMENT VERIFIED &amp; AUTHORIZED</strong>
-                  <span class="mono" style="font-size:0.75rem; color:#166534; font-weight:700;" id="s9-receipt-ref">REF: PM-2026-894210</span>
+                  <strong style="font-family:'Outfit', sans-serif; font-size:1.2rem; display:block; color:#14532d; font-weight:900;">PAYMENT VERIFIED &amp; AUTHORIZED</strong>
+                  <span style="font-family:'DM Mono', monospace; font-size:0.78rem; color:#166534; font-weight:800;" id="s9-receipt-ref">REF: PM-2026-894210</span>
                 </div>
               </div>
-              <span class="badge-streetside lime" style="font-weight:900; font-size:0.8rem;"><i class="bi bi-check-circle-fill"></i> STATUS: PAID</span>
+              <span style="background:#15803d; color:#ffffff; font-family:'DM Mono', monospace; font-weight:900; font-size:0.82rem; padding:6px 12px; border-radius:8px; border:1px solid #000;">
+                <i class="bi bi-check-circle-fill"></i> STATUS: PAID
+              </span>
             </div>
 
-            <div class="card-streetside sand" style="padding:20px; border:2px solid var(--ink);">
-              <div class="mono" style="font-size:0.75rem; font-weight:800; text-transform:uppercase; color:#4a5c56; margin-bottom:12px; border-bottom:1px solid var(--ink); padding-bottom:6px;">SUBSCRIPTION TRANSACTION RECEIPT</div>
-              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:14px; font-size:0.85rem;" class="mono">
-                <div><span style="color:#4a5c56; display:block; font-size:0.72rem;">SELECTED PLAN</span> <strong id="s9-plan-name">Pro Plan</strong></div>
-                <div><span style="color:#4a5c56; display:block; font-size:0.72rem;">PAYMENT METHOD</span> <strong id="s9-pay-method">GCash Philippines</strong></div>
-                <div><span style="color:#4a5c56; display:block; font-size:0.72rem;">BASE PLAN PRICE</span> <strong id="s9-base-price">₱999.00</strong></div>
-                <div><span style="color:#4a5c56; display:block; font-size:0.72rem;">TOTAL PAID (INCL. FEES)</span> <strong id="s9-total-paid" style="color:var(--green); font-size:1.05rem; font-weight:900;">₱1,043.96</strong></div>
-                <div><span style="color:#4a5c56; display:block; font-size:0.72rem;">BILLING CYCLE</span> <strong>Monthly Recurring</strong></div>
-                <div><span style="color:#4a5c56; display:block; font-size:0.72rem;">TRANSACTION DATE</span> <strong id="s9-payment-date">Today</strong></div>
+            <div style="padding:22px; background:#ffffff; border:2px solid #0c1a15; box-shadow:4px 4px 0 #0c1a15; border-radius:14px;">
+              <div style="font-family:'DM Mono', monospace; font-size:0.78rem; font-weight:900; text-transform:uppercase; color:#0c1a15; margin-bottom:14px; border-bottom:2px dashed #0c1a15; padding-bottom:8px;">
+                SUBSCRIPTION TRANSACTION RECEIPT
               </div>
-              <div style="margin-top:16px; border-top:1px dashed var(--ink); padding-top:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                <span style="font-size:0.78rem; color:#4a5c56;">Need to adjust or change plan?</span>
-                <button type="button" onclick="jumpToStep(8); openPaymentModalCurrent();" class="button sand" style="padding:6px 14px; font-size:0.75rem; font-weight:700;">
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px; font-size:0.88rem; font-family:'DM Mono', monospace;">
+                <div><span style="color:#64748b; display:block; font-size:0.74rem; font-weight:700;">SELECTED PLAN</span> <strong id="s9-plan-name" style="color:#0c1a15;">Pro Plan</strong></div>
+                <div><span style="color:#64748b; display:block; font-size:0.74rem; font-weight:700;">PAYMENT METHOD</span> <strong id="s9-pay-method" style="color:#0c1a15;">GCash Philippines</strong></div>
+                <div><span style="color:#64748b; display:block; font-size:0.74rem; font-weight:700;">BASE PLAN PRICE</span> <strong id="s9-base-price" style="color:#0c1a15;">₱999.00</strong></div>
+                <div><span style="color:#64748b; display:block; font-size:0.74rem; font-weight:700;">TOTAL PAID (INCL. FEES)</span> <strong id="s9-total-paid" style="color:#15803d; font-size:1.15rem; font-weight:900;">₱1,043.96</strong></div>
+                <div><span style="color:#64748b; display:block; font-size:0.74rem; font-weight:700;">BILLING CYCLE</span> <strong style="color:#0c1a15;">Monthly Recurring</strong></div>
+                <div><span style="color:#64748b; display:block; font-size:0.74rem; font-weight:700;">TRANSACTION DATE</span> <strong id="s9-payment-date" style="color:#0c1a15;">Today</strong></div>
+              </div>
+              <div style="margin-top:16px; border-top:2px dashed #0c1a15; padding-top:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                <span style="font-size:0.82rem; color:#334155; font-weight:700;">Need to adjust or change plan?</span>
+                <button type="button" onclick="jumpToStep(8); openPaymentModalCurrent();" class="btn-reset-draft">
                   <i class="bi bi-arrow-repeat"></i> Change Plan / Re-verify Payment
                 </button>
               </div>
@@ -474,98 +993,117 @@ if (empty($enabledPaymentMethods)) {
 
         <!-- STEP 10: VERIFICATION SUBMISSION -->
         <div class="wizard-step" id="step-10">
-          <div style="text-align:center; padding:10px 0;">
-            <div class="brand-mark" style="width:56px; height:56px; font-size:1.8rem; margin:0 auto 14px; background:var(--lime);">
+          <div style="text-align:center; padding:16px 0;">
+            <div style="width:64px; height:64px; border-radius:50%; background:#d4f82c; color:#0c1a15; display:grid; place-items:center; font-size:2rem; margin:0 auto 16px; border:2.5px solid #000; box-shadow:3px 3px 0 #000;">
               <i class="bi bi-patch-check-fill"></i>
             </div>
-            <h3 style="font-size:1.4rem; font-weight:800; text-transform:uppercase; margin:0 0 6px;">READY FOR VERIFICATION</h3>
-            <p style="font-size:0.88rem; color:#3b4e48; margin-bottom:20px; line-height:1.4;">
-              Your facility application status progression: <br>
-              <strong class="mono" style="color:var(--green); font-size:0.9rem;">[Draft] &rarr; [Submitted] &rarr; [Under Review] &rarr; [Approved] &rarr; [Published]</strong>
+            <h3 style="font-family:'Outfit', sans-serif; font-size:1.6rem; font-weight:900; text-transform:uppercase; margin:0 0 8px; color:#0c1a15;">
+              READY FOR VERIFICATION
+            </h3>
+            <p style="font-size:0.92rem; color:#1e293b; font-weight:600; margin-bottom:22px; line-height:1.5; max-width:580px; margin-left:auto; margin-right:auto;">
+              Your facility application is ready for submission. Our team will verify your uploaded documents and activate your court listings.
             </p>
+
+            <div style="background:#f8fafc; border:2px solid #0c1a15; box-shadow:3px 3px 0 #0c1a15; border-radius:14px; padding:18px; max-width:620px; margin:0 auto 16px;">
+              <div style="font-family:'DM Mono', monospace; font-size:0.75rem; font-weight:900; color:#0c1a15; text-transform:uppercase; margin-bottom:10px;">APPLICATION STATUS PROGRESSION</div>
+              <div style="display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:8px; font-family:'DM Mono', monospace; font-size:0.8rem; font-weight:800;">
+                <span style="background:#e2e8f0; color:#0f172a; padding:4px 10px; border-radius:6px; border:1.5px solid #0c1a15;">Draft</span>
+                <span>&rarr;</span>
+                <span style="background:#ff5733; color:#ffffff; padding:4px 10px; border-radius:6px; border:1.5px solid #0c1a15;">Submitted</span>
+                <span>&rarr;</span>
+                <span style="background:#fef08a; color:#854d0e; padding:4px 10px; border-radius:6px; border:1.5px solid #0c1a15;">Under Review</span>
+                <span>&rarr;</span>
+                <span style="background:#d4f82c; color:#0c1a15; padding:4px 10px; border-radius:6px; border:1.5px solid #0c1a15;">Approved</span>
+                <span>&rarr;</span>
+                <span style="background:#15803d; color:#ffffff; padding:4px 10px; border-radius:6px; border:1.5px solid #0c1a15;">Published</span>
+              </div>
+            </div>
           </div>
         </div>
 
         <!-- WIZARD NAVIGATION CONTROLS -->
-        <div style="display:flex; justify-content:space-between; align-items:center; border-top:2px solid var(--ink); padding-top:20px; margin-top:20px; gap:10px; flex-wrap:wrap;">
-          <button type="button" id="prev-btn" onclick="navigateStep(-1)" class="button sand" style="display:none; padding:10px 18px; font-size:0.85rem;">
+        <div class="wizard-nav-bar">
+          <button type="button" id="prev-btn" onclick="navigateStep(-1)" class="btn-nav-prev" style="display:none;">
             &laquo; Previous Step
           </button>
 
-          <button type="button" id="next-btn" onclick="navigateStep(1)" class="button coral" style="padding:10px 24px; font-size:0.88rem; margin-left:auto;">
+          <button type="button" id="next-btn" onclick="navigateStep(1)" class="btn-nav-next">
             Next Step &rarr;
           </button>
 
-          <button type="button" id="submit-btn" class="button lime" style="display:none; padding:10px 24px; font-size:0.88rem; margin-left:auto;">
+          <button type="button" id="submit-btn" class="btn-nav-submit" style="display:none;">
             <i class="bi bi-send-fill"></i> Submit for Verification
           </button>
         </div>
 
       </form>
     </div>
-  </div>
+  </main>
 
-  <div id="footer-container"></div>
+  <!-- Global Desktop Footer -->
+  <?php require_once __DIR__ . '/../includes/footer.php'; ?>
 
   <!-- PAYMENT BREAKDOWN & CONFIRMATION MODAL -->
-  <div id="payment-summary-modal" style="display:none; position:fixed; inset:0; z-index:999999 !important; background:rgba(10,20,15,0.8); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); overflow-y:auto; padding:20px 16px;">
+  <div id="payment-summary-modal" style="display:none; position:fixed; inset:0; z-index:999999 !important; background:rgba(10,20,15,0.85); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); overflow-y:auto; padding:20px 16px;">
     <div style="min-height:100%; display:flex; align-items:center; justify-content:center; padding:30px 0;">
-      <div class="card-streetside" style="max-width:620px; width:100%; background:var(--white); padding:32px; position:relative; box-shadow:8px 8px 0 var(--ink); border:3px solid var(--ink); border-radius:18px;">
-        <button type="button" onclick="closePaymentModal()" style="position:absolute; top:18px; right:18px; background:none; border:none; font-size:1.8rem; cursor:pointer; color:var(--ink); font-weight:900; line-height:1;">&times;</button>
+      <div style="max-width:620px; width:100%; background:#ffffff; padding:32px; position:relative; box-shadow:8px 8px 0 #0c1a15; border:3px solid #0c1a15; border-radius:20px;">
+        <button type="button" onclick="closePaymentModal()" style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:1.8rem; cursor:pointer; color:#0c1a15; font-weight:900; line-height:1;">&times;</button>
         
         <div style="display:flex; align-items:center; gap:14px; margin-bottom:20px;">
-          <div class="brand-mark" style="width:48px; height:48px; font-size:1.4rem; background:var(--coral); color:var(--white); border-radius:12px; display:grid; place-items:center; border:2px solid var(--ink); box-shadow:2px 2px 0 var(--ink);">
+          <div style="width:48px; height:48px; font-size:1.4rem; background:#ff5733; color:#ffffff; border-radius:12px; display:grid; place-items:center; border:2px solid #000; box-shadow:2px 2px 0 #000;">
             <i class="bi bi-receipt"></i>
           </div>
           <div>
-            <h3 style="font-size:1.25rem; font-weight:900; text-transform:uppercase; margin:0; line-height:1.2;">PAYMENT SUMMARY &amp; BREAKDOWN</h3>
-            <div style="font-size:0.78rem; color:#4a5c56; font-family:'DM Mono', monospace; font-weight:700;">Review subscription invoice &amp; payable total</div>
+            <h3 style="font-family:'Outfit', sans-serif; font-size:1.35rem; font-weight:900; text-transform:uppercase; margin:0; line-height:1.2; color:#0c1a15;">
+              PAYMENT SUMMARY &amp; BREAKDOWN
+            </h3>
+            <div style="font-size:0.8rem; color:#334155; font-family:'DM Mono', monospace; font-weight:700;">Review subscription invoice &amp; payable total</div>
           </div>
         </div>
 
-        <div class="card-streetside sand" style="padding:20px; margin-bottom:24px; border:2px solid var(--ink); border-radius:14px;">
+        <div style="padding:22px; margin-bottom:24px; background:#f8fafc; border:2px solid #0c1a15; border-radius:14px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
             <div>
-              <span class="mono" style="font-size:0.7rem; color:#4a5c56; font-weight:800; text-transform:uppercase;">SELECTED SUBSCRIPTION PLAN</span>
-              <div id="modal-plan-title" style="font-size:1.35rem; font-weight:900; color:var(--ink);">Pro Plan</div>
+              <span style="font-family:'DM Mono', monospace; font-size:0.72rem; color:#64748b; font-weight:800; text-transform:uppercase;">SELECTED SUBSCRIPTION PLAN</span>
+              <div id="modal-plan-title" style="font-family:'Outfit', sans-serif; font-size:1.45rem; font-weight:900; color:#0c1a15;">Pro Plan</div>
             </div>
-            <span class="badge-streetside coral" style="font-size:0.75rem; font-weight:800;">MONTHLY RECURRING</span>
+            <span style="background:#ff5733; color:#ffffff; font-family:'DM Mono', monospace; font-size:0.75rem; font-weight:900; padding:4px 10px; border-radius:6px; border:1px solid #000;">MONTHLY RECURRING</span>
           </div>
 
           <!-- Financial Itemization Table -->
-          <div style="border-top:2px dashed var(--ink); padding-top:12px; font-family:'DM Mono', monospace; font-size:0.85rem; line-height:2.0;">
+          <div style="border-top:2px dashed #0c1a15; padding-top:12px; font-family:'DM Mono', monospace; font-size:0.88rem; line-height:2.0;">
             <div style="display:flex; justify-content:space-between;">
-              <span style="color:#4a5c56;">Base Plan Rate:</span>
-              <strong id="modal-base-price">₱999.00</strong>
+              <span style="color:#475569;">Base Plan Rate:</span>
+              <strong id="modal-base-price" style="color:#0c1a15;">₱999.00</strong>
             </div>
             <div id="modal-fee-row-platform" style="display:flex; justify-content:space-between;">
-              <span style="color:#4a5c56;">Platform Infrastructure Fee (2%):</span>
-              <strong id="modal-platform-fee">₱19.98</strong>
+              <span style="color:#475569;">Platform Infrastructure Fee (2%):</span>
+              <strong id="modal-platform-fee" style="color:#0c1a15;">₱19.98</strong>
             </div>
             <div id="modal-fee-row-gateway" style="display:flex; justify-content:space-between;">
-              <span style="color:#4a5c56;">PayMongo Gateway Fee (2.5%):</span>
-              <strong id="modal-gateway-fee">₱24.98</strong>
+              <span style="color:#475569;">PayMongo Gateway Fee (2.5%):</span>
+              <strong id="modal-gateway-fee" style="color:#0c1a15;">₱24.98</strong>
             </div>
-            <div id="modal-free-trial-note" style="display:none; padding:10px 14px; background:#dcfce7; border:1px dashed #15803d; border-radius:8px; color:#14532d; font-size:0.8rem; font-weight:700;">
+            <div id="modal-free-trial-note" style="display:none; padding:10px 14px; background:#dcfce7; border:2px dashed #15803d; border-radius:8px; color:#14532d; font-size:0.82rem; font-weight:800;">
               <i class="bi bi-gift-fill"></i> FREE TRIAL — No payment required. Activate instantly!
             </div>
-            <div style="display:flex; justify-content:space-between; border-top:2px solid var(--ink); padding-top:10px; margin-top:10px; font-size:1.05rem; font-weight:900;">
+            <div style="display:flex; justify-content:space-between; border-top:2px solid #0c1a15; padding-top:12px; margin-top:10px; font-size:1.1rem; font-weight:900;">
               <span id="modal-total-label">TOTAL AMOUNT TO BE PAID:</span>
-              <strong id="modal-total-amount" style="color:var(--green); font-size:1.3rem;">₱1,043.96</strong>
+              <strong id="modal-total-amount" style="color:#15803d; font-size:1.4rem; font-family:'Outfit', sans-serif;">₱1,043.96</strong>
             </div>
           </div>
         </div>
 
         <!-- Payment Method Selection -->
         <div style="margin-bottom:24px;">
-          <label class="mono" style="display:block; margin-bottom:10px; font-size:0.78rem; font-weight:800;">SELECT PAYMENT CHANNEL *</label>
+          <label style="font-family:'DM Mono', monospace; display:block; margin-bottom:10px; font-size:0.8rem; font-weight:900; color:#0c1a15;">SELECT PAYMENT CHANNEL *</label>
           <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px;">
             <?php foreach ($enabledPaymentMethods as $idx => $pm): ?>
-              <label class="card-streetside modal-pay-option" style="padding:12px 14px; cursor:pointer; display:flex; align-items:center; gap:12px; border:2px solid var(--ink); border-radius:12px; background:var(--white);">
-                <input type="radio" name="modal_paymethod" value="<?= htmlspecialchars($pm['id']) ?>" <?= $idx === 0 ? 'checked' : '' ?> style="accent-color:var(--coral); transform:scale(1.25);">
+              <label class="modal-pay-option" style="padding:12px 14px; cursor:pointer; display:flex; align-items:center; gap:12px; border:2px solid #0c1a15; border-radius:12px; background:#ffffff; transition:border-color 0.2s;">
+                <input type="radio" name="modal_paymethod" value="<?= htmlspecialchars($pm['id']) ?>" <?= $idx === 0 ? 'checked' : '' ?> style="accent-color:#ff5733; transform:scale(1.25);">
                 <div>
-                  <strong style="display:block; font-size:0.88rem;"><i class="bi <?= htmlspecialchars($pm['icon']) ?>" style="color:<?= htmlspecialchars($pm['color']) ?>;"></i> <?= htmlspecialchars($pm['name']) ?></strong>
-                  <span style="font-size:0.7rem; color:#4a5c56; font-family:'DM Mono', monospace;"><?= htmlspecialchars($pm['sub']) ?></span>
+                  <strong style="display:block; font-size:0.9rem; color:#0c1a15;"><i class="bi <?= htmlspecialchars($pm['icon']) ?>" style="color:<?= htmlspecialchars($pm['color']) ?>;"></i> <?= htmlspecialchars($pm['name']) ?></strong>
+                  <span style="font-size:0.72rem; color:#475569; font-family:'DM Mono', monospace; font-weight:600;"><?= htmlspecialchars($pm['sub']) ?></span>
                 </div>
               </label>
             <?php endforeach; ?>
@@ -573,9 +1111,9 @@ if (empty($enabledPaymentMethods)) {
         </div>
 
         <!-- Action Buttons -->
-        <div style="display:flex; justify-content:flex-end; gap:12px; border-top:2px solid var(--ink); padding-top:20px;">
-          <button type="button" onclick="closePaymentModal()" class="button sand" style="padding:12px 22px; font-size:0.88rem; font-weight:700;">Cancel</button>
-          <button type="button" id="btn-modal-pay-now" onclick="processSubscriptionPayment()" class="button lime" style="padding:12px 28px; font-size:0.92rem; font-weight:900;">
+        <div style="display:flex; justify-content:flex-end; gap:12px; border-top:2px solid #0c1a15; padding-top:20px;">
+          <button type="button" onclick="closePaymentModal()" class="btn-nav-prev">Cancel</button>
+          <button type="button" id="btn-modal-pay-now" onclick="processSubscriptionPayment()" class="btn-nav-next" style="margin-left:0;">
             <i class="bi bi-lock-fill" id="btn-pay-icon"></i> <span id="btn-pay-label">Continue to Payment &rarr;</span>
           </button>
         </div>
@@ -583,11 +1121,10 @@ if (empty($enabledPaymentMethods)) {
     </div>
   </div>
 
-  <script src="/pikvero/assets/js/core/toast.js"></script>
-  <script src="/pikvero/assets/js/core/ajax.js"></script>
-  <script src="/pikvero/assets/js/core/auth.js"></script>
-  <script src="/pikvero/assets/js/components/navbar.js?v=2"></script>
-  <script src="/pikvero/assets/js/components/footer.js"></script>
+  <script src="<?= $basePath ?>/assets/js/core/toast.js"></script>
+  <script src="<?= $basePath ?>/assets/js/core/ajax.js"></script>
+  <script src="<?= $basePath ?>/assets/js/core/auth.js"></script>
+  <script src="<?= $basePath ?>/assets/js/components/navbar.js?v=2"></script>
   <script>
     let currentStep = 1;
     const totalSteps = 10;
@@ -595,6 +1132,7 @@ if (empty($enabledPaymentMethods)) {
     const subscriptionPlansData = <?= json_encode($subscriptionPlans) ?>;
     const enabledPaymentMethodsData = <?= json_encode($enabledPaymentMethods) ?>;
     let activePaymentData = null;
+    const APP_BASE = '<?= $basePath ?>';
 
     const stepTitles = [
       "1. Owner Account Setup",
@@ -611,7 +1149,6 @@ if (empty($enabledPaymentMethods)) {
 
     document.addEventListener('DOMContentLoaded', async () => {
       await NavbarComponent.render();
-      FooterComponent.render();
 
       // Attach Live Validation Listeners
       const fnameInput = document.getElementById('ob-fname');
@@ -721,16 +1258,10 @@ if (empty($enabledPaymentMethods)) {
       form.addEventListener('input', saveToLocalStorage);
       form.addEventListener('change', saveToLocalStorage);
 
-      // ── Submit handler wired directly to the button click ──────────────────
-      // Using type="button" + click listener (NOT form submit) prevents any
-      // possibility of the browser doing a native GET form submission which
-      // would reload the page and show "Restored Draft" on the first click.
+      // Submit handler wired directly to the button click
       document.getElementById('submit-btn').addEventListener('click', async () => {
 
-        // Restore passwords before validation — Chrome clears type="password"
-        // inputs inside display:none steps. Step 1 is hidden when the user is
-        // on Step 10, so ob-pass.value reads as ''. We must restore from
-        // localStorage BEFORE validateStep(1) runs.
+        // Restore passwords before validation
         try {
           const _d = JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}');
           const _p  = document.getElementById('ob-pass');
@@ -753,7 +1284,6 @@ if (empty($enabledPaymentMethods)) {
         submitBtn.disabled = true;
         submitBtn.innerHTML = `<i class="bi bi-hourglass-split"></i> Registering Account &amp; Saving Records...`;
 
-        // Read draft for password fallback (field may have been cleared again)
         const _draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}');
 
         const payload = {
@@ -781,12 +1311,12 @@ if (empty($enabledPaymentMethods)) {
         };
 
         try {
-          const res = await Api.post('/pikvero/api/owner/submit-onboarding.php', payload);
+          const res = await Api.post(`${APP_BASE}/api/owner/submit-onboarding.php`, payload);
           if (res.success) {
             localStorage.removeItem(DRAFT_KEY);
             Toast.success('Application Submitted!', res.message || 'Onboarding completed & records saved to database!');
             setTimeout(() => {
-              window.location.href = res.data?.redirect || '/pikvero/public/admin/dashboard.php';
+              window.location.href = res.data?.redirect || `${APP_BASE}/public/admin/dashboard.php`;
             }, 1200);
           } else {
             Toast.error('Submission Error', res.message || 'Failed to insert onboarding records into database.');
@@ -829,7 +1359,7 @@ if (empty($enabledPaymentMethods)) {
         return false;
       }
       try {
-        const res = await Api.get('/pikvero/api/auth/check-unique.php', { field: 'username', value: val });
+        const res = await Api.get(`${APP_BASE}/api/auth/check-unique.php`, { field: 'username', value: val });
         if (res.success && res.data.exists) {
           setFeedback(el, fb, false, '✕ This username is already taken. Please choose another.');
           return false;
@@ -865,7 +1395,7 @@ if (empty($enabledPaymentMethods)) {
         return false;
       }
       try {
-        const res = await Api.get('/pikvero/api/auth/check-unique.php', { field: 'email', value: val });
+        const res = await Api.get(`${APP_BASE}/api/auth/check-unique.php`, { field: 'email', value: val });
         if (res.success && res.data.exists) {
           setFeedback(el, fb, false, '✕ This email address is already registered to an account.');
           return false;
@@ -885,7 +1415,7 @@ if (empty($enabledPaymentMethods)) {
         return false;
       }
       try {
-        const res = await Api.get('/pikvero/api/auth/check-unique.php', { field: 'phone', value: val });
+        const res = await Api.get(`${APP_BASE}/api/auth/check-unique.php`, { field: 'phone', value: val });
         if (res.success && res.data.exists) {
           setFeedback(el, fb, false, '✕ This phone number is already registered to an account.');
           return false;
@@ -938,7 +1468,7 @@ if (empty($enabledPaymentMethods)) {
         return false;
       }
       try {
-        const res = await Api.get('/pikvero/api/auth/check-unique.php', { field: 'organization_name', value: val });
+        const res = await Api.get(`${APP_BASE}/api/auth/check-unique.php`, { field: 'organization_name', value: val });
         if (res.success && res.data.exists) {
           setFeedback(el, fb, false, '✕ This Organization / Club Name is already registered.');
           return false;
@@ -958,7 +1488,7 @@ if (empty($enabledPaymentMethods)) {
         return false;
       }
       try {
-        const res = await Api.get('/pikvero/api/auth/check-unique.php', { field: 'tax_id', value: val });
+        const res = await Api.get(`${APP_BASE}/api/auth/check-unique.php`, { field: 'tax_id', value: val });
         if (res.success && res.data.exists) {
           setFeedback(el, fb, false, '✕ This Business Permit / DTI / SEC Registration # is already registered.');
           return false;
@@ -1078,20 +1608,21 @@ if (empty($enabledPaymentMethods)) {
           if (container) container.appendChild(previewBox);
         }
         const sizeMb = (savedDocData.size / (1024 * 1024)).toFixed(2);
-        previewBox.className = 'card-streetside lime';
         previewBox.style.padding = '12px 16px';
         previewBox.style.marginTop = '14px';
         previewBox.style.display = 'flex';
         previewBox.style.alignItems = 'center';
-        previewBox.style.justify = 'space-between';
-        previewBox.style.border = '2px solid var(--ink)';
+        previewBox.style.justifyContent = 'space-between';
+        previewBox.style.border = '2px solid #0c1a15';
+        previewBox.style.boxShadow = '2px 2px 0 #0c1a15';
         previewBox.style.borderRadius = '10px';
+        previewBox.style.background = '#dcfce7';
         previewBox.innerHTML = `
           <div>
-            <strong style="display:block; font-size:0.85rem; font-family:'DM Mono', monospace;"><i class="bi bi-file-earmark-check-fill" style="color:var(--ink);"></i> ATTACHED DOCUMENT: ${savedDocData.name}</strong>
-            <span style="font-size:0.72rem; color:#334155; font-family:'DM Mono', monospace;">Size: ${sizeMb} MB | Saved in Draft</span>
+            <strong style="display:block; font-size:0.85rem; font-family:'DM Mono', monospace; color:#14532d;"><i class="bi bi-file-earmark-check-fill"></i> ATTACHED: ${savedDocData.name}</strong>
+            <span style="font-size:0.75rem; color:#166534; font-family:'DM Mono', monospace; font-weight:700;">Size: ${sizeMb} MB | Saved in Draft</span>
           </div>
-          <span class="badge-streetside coral" style="font-size:0.7rem;">✓ ATTACHED</span>
+          <span style="background:#15803d; color:#ffffff; font-family:'DM Mono', monospace; font-size:0.72rem; font-weight:900; padding:4px 8px; border-radius:6px; border:1px solid #000;">✓ ATTACHED</span>
         `;
       } else if (previewBox) {
         previewBox.remove();
@@ -1206,10 +1737,9 @@ if (empty($enabledPaymentMethods)) {
       btn.innerHTML = `<i class="bi bi-hourglass-split"></i> Redirecting to PayMongo...`;
 
       try {
-        const res = await Api.post('/pikvero/api/payments/paymongo-checkout.php', {
+        const res = await Api.post(`${APP_BASE}/api/payments/paymongo-checkout.php`, {
           plan_slug: selectedSlug,
           payment_method: selectedPayOption,
-          // Send the current page URL so PayMongo can redirect back here after payment
           redirect_url: window.location.origin + window.location.pathname
         });
 
@@ -1233,13 +1763,7 @@ if (empty($enabledPaymentMethods)) {
       }
     }
 
-
     function saveToLocalStorage() {
-      // Browsers (Chrome, etc.) silently clear type="password" inputs that are
-      // inside display:none containers. Step 1 is hidden when payment fires, so
-      // ob-pass.value reads '' even if the user filled it in. We preserve the
-      // existing saved password whenever the live field is empty, so it is never
-      // accidentally overwritten with an empty string.
       const existing = JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}');
       const livePass  = document.getElementById('ob-pass')?.value  || '';
       const liveCpass = document.getElementById('ob-cpass')?.value || '';
@@ -1251,8 +1775,8 @@ if (empty($enabledPaymentMethods)) {
         lname: document.getElementById('ob-lname')?.value || '',
         email: document.getElementById('ob-email')?.value || '',
         phone: document.getElementById('ob-phone')?.value || '',
-        pass:  livePass  || existing.pass  || '',   // ← keep saved value if browser cleared it
-        cpass: liveCpass || existing.cpass || '',   // ← keep saved value if browser cleared it
+        pass:  livePass  || existing.pass  || '',
+        cpass: liveCpass || existing.cpass || '',
         orgname: document.getElementById('ob-orgname')?.value || '',
         taxid: document.getElementById('ob-taxid')?.value || '',
         facname: document.getElementById('ob-facname')?.value || '',
@@ -1272,7 +1796,6 @@ if (empty($enabledPaymentMethods)) {
 
       localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
     }
-
 
     function restoreFromLocalStorage() {
       const raw = localStorage.getItem(DRAFT_KEY);
@@ -1357,7 +1880,6 @@ if (empty($enabledPaymentMethods)) {
           const isValid = await validateStep(s);
           if (!isValid) {
             Toast.error('Step Security Guard', `You must complete required fields in Step ${s} before proceeding to Step ${targetStep}.`);
-            // Render active step N
             jumpToStepDirect(s);
             return;
           }
@@ -1396,12 +1918,7 @@ if (empty($enabledPaymentMethods)) {
       document.getElementById('next-btn').style.display = currentStep < totalSteps ? 'inline-flex' : 'none';
       document.getElementById('submit-btn').style.display = currentStep === totalSteps ? 'inline-flex' : 'none';
 
-      // Re-populate password fields whenever Step 1 becomes visible.
-      // Chrome silently clears type="password" inputs every time their parent
-      // transitions through display:none → display:block, so we must restore
-      // them from localStorage each time Step 1 is shown.
-      // NOTE: We always overwrite (no !passEl.value guard) so the user's
-      // exact saved password wins over any browser autofill injection.
+      // Re-populate password fields whenever Step 1 becomes visible
       if (targetStep === 1) {
         setTimeout(() => {
           try {
@@ -1417,7 +1934,6 @@ if (empty($enabledPaymentMethods)) {
       saveToLocalStorage();
     }
 
-
     async function navigateStep(direction) {
       const targetStep = currentStep + direction;
       await jumpToStep(targetStep);
@@ -1425,20 +1941,14 @@ if (empty($enabledPaymentMethods)) {
 
     function selectSubPlan(planName) {
       document.querySelectorAll('.sub-plan-card').forEach(card => {
-        card.style.border = '2px solid var(--ink)';
-        card.style.background = 'var(--white)';
-        card.style.transform = 'none';
-        card.style.boxShadow = 'none';
+        card.classList.remove('selected');
         const badge = card.querySelector('.badge-selected');
         if (badge) badge.style.display = 'none';
       });
 
       const activeCard = document.getElementById(`plan-card-${planName}`);
       if (activeCard) {
-        activeCard.style.border = '3px solid var(--coral)';
-        activeCard.style.background = planName === 'pro' ? 'var(--lime)' : 'var(--sand)';
-        activeCard.style.transform = 'translateY(-4px)';
-        activeCard.style.boxShadow = '4px 4px 0 var(--ink)';
+        activeCard.classList.add('selected');
         const badge = activeCard.querySelector('.badge-selected');
         if (badge) badge.style.display = 'inline-block';
       }
@@ -1446,7 +1956,6 @@ if (empty($enabledPaymentMethods)) {
       const radio = document.querySelector(`input[name="sub_plan"][value="${planName}"]`);
       if (radio) radio.checked = true;
 
-      // If user changes plan after previous payment authorization, reset payment status
       if (activePaymentData && activePaymentData.planSlug !== planName) {
         activePaymentData = null;
         document.getElementById('s9-payment-pending-box').style.display = 'block';

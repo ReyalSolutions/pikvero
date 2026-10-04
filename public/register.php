@@ -661,8 +661,7 @@ $favLogo = class_exists(Auth::class) ? Auth::getLogoUrl() : ($basePath . '/asset
     </div>
   </main>
 
-  <!-- Global Desktop Footer -->
-  <?php require_once __DIR__ . '/../includes/footer.php'; ?>
+
 
   <!-- Scripts -->
   <script src="<?= $basePath ?>/assets/js/core/toast.js"></script>

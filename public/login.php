@@ -312,6 +312,31 @@ $favLogo = class_exists(Auth::class) ? Auth::getLogoUrl() : ($basePath . '/asset
       transform: translateY(0);
     }
 
+    /* Register Prompt Link */
+    .register-prompt-box {
+      margin-top: 18px;
+      text-align: center;
+      font-size: 0.88rem;
+      color: #475569;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .register-link {
+      color: var(--coral);
+      font-weight: 800;
+      text-decoration: none;
+      transition: color 0.15s ease;
+    }
+
+    .register-link:hover {
+      color: var(--coral-hover);
+      text-decoration: underline;
+    }
+
     /* One-Click Demo Section */
     .demo-divider {
       border-top: 1px dashed rgba(0, 0, 0, 0.16);
@@ -457,20 +482,18 @@ $favLogo = class_exists(Auth::class) ? Auth::getLogoUrl() : ($basePath . '/asset
         </button>
       </form>
 
-      <!-- One-Click Demo Login -->
-      <div class="demo-divider"></div>
-      <div class="demo-title">ONE-CLICK DEMO LOGIN (USERNAME)</div>
-      <div class="demo-buttons-grid">
-        <button type="button" onclick="demoLogin('player')" class="btn-demo dark">Player</button>
-        <button type="button" onclick="demoLogin('owner')" class="btn-demo lime">Owner</button>
-        <button type="button" onclick="demoLogin('admin')" class="btn-demo coral">Admin</button>
+      <!-- Register Prompt Link -->
+      <div class="register-prompt-box">
+        <span>Don't have an account?</span>
+        <a href="<?= $basePath ?>/public/register" class="register-link">Create Account &rarr;</a>
       </div>
+
+     
 
     </div>
   </main>
 
-  <!-- GLOBAL DESKTOP FOOTER -->
-  <?php require_once __DIR__ . '/../includes/footer.php'; ?>
+ 
 
   <!-- Scripts -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>

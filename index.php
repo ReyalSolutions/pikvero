@@ -2246,59 +2246,8 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
     </div>
   </section>
 
-  <!-- 7. COMPREHENSIVE FOOTER -->
-  <footer class="footer-main">
-    <div class="footer-container">
-      <div>
-        <div class="footer-brand-title">PIKVERO</div>
-        <p class="footer-brand-desc">
-          The premier pickleball court booking platform in Bohol and across the Philippines. Connecting passionate players with top-tier facilities.
-        </p>
-        <div style="display:flex; gap:10px;">
-          <a href="#" style="color:#ffffff; font-size:1.2rem;" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
-          <a href="#" style="color:#ffffff; font-size:1.2rem;" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
-          <a href="#" style="color:#ffffff; font-size:1.2rem;" aria-label="Twitter"><i class="bi bi-twitter-x"></i></a>
-        </div>
-      </div>
-
-      <div>
-        <div class="footer-col-title">EXPLORE</div>
-        <ul class="footer-link-list">
-          <li><a href="<?= $basePath ?>/public/search">Browse Courts</a></li>
-          <li><a href="<?= $basePath ?>/public/open-play">Open Play Socials</a></li>
-          <li><a href="<?= $basePath ?>/public/pricing">Hourly Passes</a></li>
-          <li><a href="<?= $basePath ?>/public/search?city=Tagbilaran+City">Bohol Courts</a></li>
-        </ul>
-      </div>
-
-      <div>
-        <div class="footer-col-title">FACILITY OWNERS</div>
-        <ul class="footer-link-list">
-          <li><a href="<?= $basePath ?>/public/register?type=owner">List Your Venue</a></li>
-          <li><a href="<?= $basePath ?>/public/pricing">SaaS Subscriptions</a></li>
-          <li><a href="<?= $basePath ?>/public/owner/dashboard">Owner Portal</a></li>
-          <li><a href="<?= $basePath ?>/public/login">Login to Dashboard</a></li>
-        </ul>
-      </div>
-
-      <div>
-        <div class="footer-col-title">SUPPORT &amp; LEGAL</div>
-        <ul class="footer-link-list">
-          <li><a href="<?= $basePath ?>/public/about">About Pikvero</a></li>
-          <li><a href="<?= $basePath ?>/public/contact">Contact Support</a></li>
-          <li><a href="<?= $basePath ?>/public/terms">Terms of Service</a></li>
-          <li><a href="<?= $basePath ?>/public/privacy">Privacy Policy</a></li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="footer-bottom-bar" style="max-width:1280px; margin:0 auto;">
-      <div>&copy; <?= date('Y') ?> Pikvero. All rights reserved. Built for Streetside Pickleball.</div>
-      <div style="display:flex; gap:16px;">
-        <span>🇵🇭 Tagbilaran City, Bohol, Philippines</span>
-      </div>
-    </div>
-  </footer>
+  <!-- 7. GLOBAL DESKTOP FOOTER -->
+  <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
   <!-- Interactive Slider Script -->
   <script>

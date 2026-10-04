@@ -842,6 +842,9 @@ $user = $isLoggedIn ? Auth::user() : [];
 
   </main>
 
+  <!-- GLOBAL DESKTOP FOOTER -->
+  <?php require_once __DIR__ . '/../includes/footer.php'; ?>
+
   <!-- jQuery & Scripts -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="<?= $basePath ?>/assets/js/core/toast.js"></script>

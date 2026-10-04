@@ -1134,6 +1134,9 @@ if (empty($availableCities)) {
 
   </main>
 
+  <!-- GLOBAL DESKTOP FOOTER -->
+  <?php require_once __DIR__ . '/../includes/footer.php'; ?>
+
   <!-- jQuery CDN -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script>

@@ -54,24 +54,33 @@ $logoImg = $basePath . '/assets/images/logo.png';
 
   .navbar-pill {
     position: fixed;
-    top: 18px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: calc(100% - 56px);
-    max-width: 1324px;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
     z-index: 1000;
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border-radius: 9999px;
-    padding: 8px 14px 8px 24px;
+    border-radius: 0;
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-bottom: 1.5px solid rgba(255, 255, 255, 0.95);
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+  }
+
+  .navbar-inner-wrap {
+    width: 100%;
+    max-width: 1360px;
+    margin: 0 auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border: 1.5px solid rgba(255, 255, 255, 0.95);
-    box-shadow: 0 14px 34px -8px rgba(0, 0, 0, 0.16);
-    transition: all 0.3s ease;
-    box-sizing: border-box;
   }
 
   .navbar-pill * {
@@ -245,62 +254,67 @@ $logoImg = $basePath . '/assets/images/logo.png';
 
   @media (max-width: 640px) {
     .navbar-pill {
-      top: 12px !important;
-      width: calc(100% - 24px) !important;
-      padding: 8px 12px 8px 16px !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      width: 100% !important;
+      border-radius: 0 !important;
+      padding: 10px 16px !important;
     }
   }
 </style>
 
-<!-- Reusable Global Fixed Floating Pill Navbar -->
-<header class="navbar-pill" <?= !empty($GLOBALS['dbError'] ?? $dbError ?? null) ? 'style="top: 54px;"' : '' ?>>
-  <a href="<?= $basePath ?>/" class="brand-group">
-    <div class="brand-logo-badge">
-      <img src="<?= htmlspecialchars($logoImg) ?>" alt="Pikvero Logo" onerror="this.onerror=null; this.parentNode.innerHTML='🎾';">
-    </div>
-    <span class="brand-name">PIKVERO</span>
-  </a>
+<!-- Reusable Global Fixed Navbar (Pinned at very top) -->
+<header class="navbar-pill" <?= !empty($GLOBALS['dbError'] ?? $dbError ?? null) ? 'style="top: 42px;"' : '' ?>>
+  <div class="navbar-inner-wrap">
+    <a href="<?= $basePath ?>/" class="brand-group">
+      <div class="brand-logo-badge">
+        <img src="<?= htmlspecialchars($logoImg) ?>" alt="Pikvero Logo" onerror="this.onerror=null; this.parentNode.innerHTML='🎾';">
+      </div>
+      <span class="brand-name">PIKVERO</span>
+    </a>
 
-  <nav class="nav-links-wrap">
-    <a href="<?= $basePath ?>/" class="nav-pill-item <?= $isHome ? 'active' : '' ?>">
-      <i class="bi bi-house-door-fill"></i>
-      <span>Home</span>
-    </a>
-    <a href="<?= $basePath ?>/public/search" class="nav-pill-item <?= $isSearch ? 'active' : '' ?>">
-      <i class="bi bi-search"></i>
-      <span>Explore Courts</span>
-    </a>
-    <a href="<?= $basePath ?>/public/open-play" class="nav-pill-item <?= $isOpenPlay ? 'active' : '' ?>">
-      <i class="bi bi-people-fill"></i>
-      <span>Open Play</span>
-    </a>
-    <a href="<?= $basePath ?>/public/pricing" class="nav-pill-item <?= $isPricing ? 'active' : '' ?>">
-      <i class="bi bi-tag-fill"></i>
-      <span>Pricing</span>
-    </a>
-    <a href="<?= $basePath ?>/public/register?type=owner" class="nav-pill-item <?= $isOwner ? 'active' : '' ?>">
-      <i class="bi bi-shop"></i>
-      <span>Become an Owner</span>
-    </a>
-  </nav>
-
-  <div class="nav-actions-wrap">
-    <?php if ($isLoggedIn): ?>
-      <a href="<?= $dashboardUrl ?>" class="nav-link-login" style="color:var(--hdr-coral);">
-        <i class="bi bi-person-circle"></i> <?= htmlspecialchars($userName) ?>
+    <nav class="nav-links-wrap">
+      <a href="<?= $basePath ?>/" class="nav-pill-item <?= $isHome ? 'active' : '' ?>">
+        <i class="bi bi-house-door-fill"></i>
+        <span>Home</span>
       </a>
-    <?php else: ?>
-      <a href="<?= $basePath ?>/public/login" class="nav-link-login">LOGIN</a>
-    <?php endif; ?>
+      <a href="<?= $basePath ?>/public/search" class="nav-pill-item <?= $isSearch ? 'active' : '' ?>">
+        <i class="bi bi-search"></i>
+        <span>Explore Courts</span>
+      </a>
+      <a href="<?= $basePath ?>/public/open-play" class="nav-pill-item <?= $isOpenPlay ? 'active' : '' ?>">
+        <i class="bi bi-people-fill"></i>
+        <span>Open Play</span>
+      </a>
+      <a href="<?= $basePath ?>/public/pricing" class="nav-pill-item <?= $isPricing ? 'active' : '' ?>">
+        <i class="bi bi-tag-fill"></i>
+        <span>Pricing</span>
+      </a>
+      <a href="<?= $basePath ?>/public/register?type=owner" class="nav-pill-item <?= $isOwner ? 'active' : '' ?>">
+        <i class="bi bi-shop"></i>
+        <span>Become an Owner</span>
+      </a>
+    </nav>
 
-    <a href="<?= $basePath ?>/public/search" class="btn-play-local">
-      <i class="bi bi-play-fill"></i>
-      <span>Play Local</span>
-    </a>
+    <div class="nav-actions-wrap">
+      <?php if ($isLoggedIn): ?>
+        <a href="<?= $dashboardUrl ?>" class="nav-link-login" style="color:var(--hdr-coral);">
+          <i class="bi bi-person-circle"></i> <?= htmlspecialchars($userName) ?>
+        </a>
+      <?php else: ?>
+        <a href="<?= $basePath ?>/public/login" class="nav-link-login">LOGIN</a>
+      <?php endif; ?>
 
-    <button class="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Open Navigation Menu">
-      <i class="bi bi-list"></i>
-    </button>
+      <a href="<?= $basePath ?>/public/search" class="btn-play-local">
+        <i class="bi bi-play-fill"></i>
+        <span>Play Local</span>
+      </a>
+
+      <button class="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Open Navigation Menu">
+        <i class="bi bi-list"></i>
+      </button>
+    </div>
   </div>
 </header>
 

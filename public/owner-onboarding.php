@@ -1040,8 +1040,7 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
     </div>
   </main>
 
-  <!-- Global Desktop Footer -->
-  <?php require_once __DIR__ . '/../includes/footer.php'; ?>
+ 
 
   <!-- PAYMENT BREAKDOWN & CONFIRMATION MODAL -->
   <div id="payment-summary-modal" style="display:none; position:fixed; inset:0; z-index:999999 !important; background:rgba(10,20,15,0.85); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); overflow-y:auto; padding:20px 16px;">

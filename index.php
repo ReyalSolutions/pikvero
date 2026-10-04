@@ -1832,10 +1832,7 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
               <i class="bi bi-lightning-charge-fill"></i>
               <span>Real-Time Availability</span>
             </div>
-            <div class="trust-item">
-              <i class="bi bi-people-fill"></i>
-              <span>Local Communities</span>
-            </div>
+           
             <div class="trust-item">
               <i class="bi bi-shield-check"></i>
               <span>Safe &amp; Secure Payments</span>

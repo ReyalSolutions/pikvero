@@ -2,7 +2,7 @@
  * Global AJAX Utility for Pikvero
  */
 const Api = {
-  baseUrl: 'http://localhost/pikvero',
+  baseUrl: location.origin + '/pikvero',
 
   async request(url, options = {}) {
     const defaultHeaders = {

@@ -17,6 +17,60 @@ jobs:
         with:
           fetch-depth: 2
 
+      - name: Prepare root-hosted application paths
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          import re
+          import shutil
+          import subprocess
+
+          destination = Path('deploy-site')
+          text_extensions = {'.php', '.js', '.css', '.html', '.json', '.webmanifest'}
+          release = os.environ['GITHUB_SHA'][:12]
+          checked = 0
+          files = subprocess.check_output(['git', 'ls-files', '-z']).decode().split('\0')
+          for filename in filter(None, files):
+              source = Path(filename)
+              if not source.is_file():
+                  continue
+              target = destination / source
+              target.parent.mkdir(parents=True, exist_ok=True)
+              if source.suffix in text_extensions:
+                  content = source.read_text(encoding='utf-8')
+                  content = content.replace('/pikvero/', '/')
+                  content = content.replace("'/pikvero'", "''").replace('"/pikvero"', '""')
+                  # Invalidate cached scripts/styles, including dynamically loaded badges.
+                  content = re.sub(
+                      r'''(["'])(/assets/[^"'<>\s?]+\.(?:js|css))(\?)?''',
+                      lambda match: match[1] + match[2] + '?release=' + release + ('&' if match[3] else ''),
+                      content,
+                  )
+                  if '/pikvero/' in content:
+                      raise RuntimeError('Legacy hosting path remains in ' + filename)
+                  target.write_text(content, encoding='utf-8')
+                  checked += 1
+              else:
+                  shutil.copy2(source, target)
+          # Validate the player destinations and both failing request modules.
+          required = [
+              'public/customer/dashboard.php', 'public/customer/bookings.php',
+              'public/customer/search.php', 'public/customer/open-play.php',
+              'public/customer/profile.php', 'public/customer/edit-profile.php',
+              'public/customer/account-settings.php', 'public/customer/notifications.php',
+              'public/facility.php', 'api/auth/me.php', 'api/customer/inbox.php',
+              'api/customer/facilities.php', 'api/customer/bookings.php',
+              'assets/js/components/notification-badge.js',
+              'assets/js/components/bottom-nav.js', 'assets/js/components/navbar.js',
+          ]
+          for filename in required:
+              if not (destination / filename).is_file():
+                  raise RuntimeError('Missing deployment file: ' + filename)
+              print('Verified root hosting paths: ' + filename)
+          print('Verified ' + str(checked) + ' deployed text files contain no /pikvero/ prefix')
+          PY
+
       - name: Deploy to InfinityFree via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
@@ -25,7 +79,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftp
           port: 21
-          local-dir: ./
+          local-dir: ./deploy-site/
           # Deploy the project directly into the hosting document root.
           server-dir: /htdocs/
           log-level: verbose

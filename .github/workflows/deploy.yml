@@ -26,7 +26,8 @@ jobs:
           protocol: ftp
           port: 21
           local-dir: ./
-          server-dir: /htdocs/
+          # The application URLs and asset paths use the /pikvero/ subdirectory.
+          server-dir: /htdocs/pikvero/
           dangerous-clean-slate: false
           exclude: |
             **/.git*

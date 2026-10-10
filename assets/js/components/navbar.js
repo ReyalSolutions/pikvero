@@ -18,6 +18,7 @@ const NavbarComponent = {
       }
 
       authNavHtml = `
+        <a href="/pikvero/public/notifications.php" aria-label="Your notifications" class="button sand" style="min-width:44px;min-height:44px;padding:8px;"><i class="bi bi-bell" aria-hidden="true"></i></a>
         <div style="position:relative;">
           <button id="user-profile-btn" type="button" class="button sand" style="padding:4px 12px 4px 6px; font-size:0.82rem; gap:8px; cursor:pointer;">
             <div class="brand-mark" style="width:28px; height:28px; font-size:0.78rem; background:var(--coral); color:var(--white);">
@@ -328,3 +329,8 @@ const NavbarComponent = {
     this.clockInterval = setInterval(updateClock, 1000);
   }
 };
+
+// Load the shared unread badge for portal notification bells.
+if(!document.querySelector('script[data-notification-badge]')){
+ const notificationBadgeScript=document.createElement('script');notificationBadgeScript.dataset.notificationBadge='true';notificationBadgeScript.src='/pikvero/assets/js/components/notification-badge.js?v=20261010';document.body.append(notificationBadgeScript);
+}

@@ -246,16 +246,29 @@ $logoImg = $basePath . '/assets/images/logo.png';
     box-shadow: -8px 0 25px rgba(0,0,0,0.25);
   }
 
-  @media (max-width: 1080px) {
+  @media (max-width: 1280px) {
     .nav-links-wrap {
       display: none !important;
     }
     .mobile-menu-btn {
       display: block !important;
+      flex: 0 0 44px;
+      width: 44px;
+      height: 44px;
     }
+    .navbar-inner-wrap { gap: 16px; }
+    .brand-group { flex-shrink: 0; }
+    .nav-actions-wrap { gap: 8px; min-width: 0; }
+    .btn-play-local { white-space: nowrap; }
+    .nav-link-login { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .drawer-content { height: 100dvh; overflow-y: auto; }
+    .drawer-content > a { min-height: 44px; }
   }
 
   @media (max-width: 640px) {
+    .navbar-pill .nav-link-login,
+    .navbar-pill .btn-play-local { display: none; }
+    .brand-group { gap: 10px; }
     .navbar-pill {
       top: 0 !important;
       left: 0 !important;
@@ -314,7 +327,7 @@ $logoImg = $basePath . '/assets/images/logo.png';
         <span>Play Local</span>
       </a>
 
-      <button class="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Open Navigation Menu">
+      <button type="button" class="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Open Navigation Menu" aria-controls="mobileDrawer" aria-expanded="false">
         <i class="bi bi-list"></i>
       </button>
     </div>
@@ -322,7 +335,7 @@ $logoImg = $basePath . '/assets/images/logo.png';
 </header>
 
 <!-- Mobile Navigation Drawer -->
-<div class="mobile-drawer" id="mobileDrawer" onclick="if(event.target === this) toggleMobileMenu()">
+<div class="mobile-drawer" id="mobileDrawer" inert aria-hidden="true" onclick="if(event.target === this) closeSidebar()">
   <div class="drawer-content">
     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1.5px solid #e2e8f0; padding-bottom:12px;">
       <span style="font-weight:800; font-family:'Outfit',sans-serif; text-transform:uppercase; font-size:1.1rem;">Menu</span>
@@ -354,16 +367,39 @@ $logoImg = $basePath . '/assets/images/logo.png';
 </div>
 
 <script>
-  function toggleMobileMenu() {
+  function setMobileMenu(open) {
     const drawer = document.getElementById('mobileDrawer');
+    const trigger = document.querySelector('.navbar-pill .mobile-menu-btn');
     if (drawer) {
-      drawer.classList.toggle('open');
+      drawer.classList.toggle('open', open);
+      drawer.inert = !open;
+      drawer.setAttribute('aria-hidden', String(!open));
+      trigger?.setAttribute('aria-expanded', String(open));
+      document.body.style.overflow = open ? 'hidden' : '';
+      if (open) drawer.querySelector('button')?.focus();
+      else if (drawer.contains(document.activeElement)) trigger?.focus();
     }
+  }
+  function toggleMobileMenu() {
+    setMobileMenu(!document.getElementById('mobileDrawer')?.classList.contains('open'));
   }
   // Backward compatibility alias for legacy scripts
   function toggleSidebar() { toggleMobileMenu(); }
   function closeSidebar() { 
-    const drawer = document.getElementById('mobileDrawer');
-    if (drawer) drawer.classList.remove('open');
+    setMobileMenu(false);
   }
+  document.addEventListener('keydown', function(event) {
+    const drawer = document.getElementById('mobileDrawer');
+    if (!drawer?.classList.contains('open')) return;
+    if (event.key === 'Escape') closeSidebar();
+    if (event.key === 'Tab') {
+      const items = drawer.querySelectorAll('a[href], button');
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
+  });
+  window.matchMedia('(max-width: 1280px)').addEventListener('change', function(event) {
+    if (!event.matches) closeSidebar();
+  });
 </script>

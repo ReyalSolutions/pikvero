@@ -74,7 +74,9 @@ class CourtRepository {
     }
 
     public function search(array $filters = []): array {
-        $sql = "SELECT c.*, f.name AS facility_name, f.address, f.city, f.province
+        $sql = "SELECT c.*, f.name AS facility_name, f.address, f.city, f.province,
+                       (SELECT ROUND(AVG(r.rating), 1) FROM reviews r WHERE r.facility_id = f.id) AS avg_rating,
+                       (SELECT COUNT(*) FROM reviews r WHERE r.facility_id = f.id) AS total_reviews
                 FROM courts c
                 JOIN facilities f ON c.facility_id = f.id
                 WHERE c.status = 'active' AND f.status = 'active'";
@@ -350,4 +352,3 @@ class CourtRepository {
         ];
     }
 }
-

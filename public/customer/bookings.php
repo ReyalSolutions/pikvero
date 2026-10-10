@@ -9,6 +9,7 @@ $bookingRef = $request->get('booking_ref') ?? $request->get('ref');
 
 $paymentSuccessNotice = false;
 $confirmedBookingRef = '';
+$confirmationData = null;
 
 if ($paymentStatus === 'success' && !empty($bookingRef) && Auth::check()) {
     try {
@@ -17,8 +18,20 @@ if ($paymentStatus === 'success' && !empty($bookingRef) && Auth::check()) {
         if ($updatedBooking) {
             $paymentSuccessNotice = true;
             $confirmedBookingRef = htmlspecialchars($updatedBooking['booking_reference'] ?? $bookingRef);
+            $confirmationData = $updatedBooking;
         }
     } catch (\Throwable $e) {}
+}
+if (!$confirmationData && $request->get('confirmed') === '1' && !empty($bookingRef) && Auth::check()) {
+    $candidate = (new \App\Infrastructure\Repositories\BookingRepository())->findByReference((string)$bookingRef);
+    if ($candidate && (int)$candidate['customer_id'] === Auth::id() && $candidate['booking_status'] === 'confirmed') {
+        $confirmationData = $candidate;
+    }
+}
+if ($confirmationData) {
+    $images = (new \App\Infrastructure\Repositories\FacilityRepository())->getFacilityImages((int)$confirmationData['facility_id']);
+    $confirmationData = array_intersect_key($confirmationData, array_flip(['id', 'booking_reference', 'facility_name', 'court_name', 'booking_date', 'start_time', 'end_time', 'duration_hours', 'total_amount', 'booking_status', 'address', 'city']));
+    $confirmationData['image'] = $images[0]['image_path'] ?? '/pikvero/assets/images/logo.png';
 }
 ?>
 <!doctype html>
@@ -33,7 +46,7 @@ if ($paymentStatus === 'success' && !empty($bookingRef) && Auth::check()) {
   <link rel="apple-touch-icon" href="<?= htmlspecialchars($favLogo) ?>?v=<?= time() ?>">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
-  <link rel="stylesheet" href="/pikvero/assets/css/streetside-theme.css?v=3">
+  <link rel="stylesheet" href="/pikvero/assets/css/streetside-theme.css?v=<?= filemtime(__DIR__ . '/../../assets/css/streetside-theme.css') ?>">
   <link rel="stylesheet" href="/pikvero/assets/css/toast.css">
   <style>
     /* DataTables Streetside styling */
@@ -244,8 +257,15 @@ if ($paymentStatus === 'success' && !empty($bookingRef) && Auth::check()) {
       }
     }
   </style>
+<link rel="stylesheet" href="/pikvero/assets/css/player-pages.css?v=1">
+<link rel="manifest" href="/pikvero/manifest.webmanifest">
+<meta name="theme-color" content="#003d2d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pikvero">
+<link rel="apple-touch-icon" href="/pikvero/assets/images/pwa/icon-180.png">
+<script defer src="/pikvero/assets/js/components/pwa.js?v=20261010"></script>
 </head>
-<body>
+<body class="customer-portal player-bookings">
 
   <div id="sidebar-container"></div>
   <div id="navbar-container"></div>
@@ -254,11 +274,11 @@ if ($paymentStatus === 'success' && !empty($bookingRef) && Auth::check()) {
     <div>
       <div class="bookings-header-wrap" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
         <div>
-          <div class="eyebrow">RESERVATIONS MARKETPLACE</div>
-          <h1 class="bookings-title" style="font-size: clamp(1.5rem, 4vw, 2.1rem); font-weight:800; text-transform:uppercase; margin:2px 0 0;">MY COURT BOOKINGS</h1>
+          <div class="eyebrow">YOUR RESERVATIONS</div>
+          <h1 class="bookings-title" style="font-size: clamp(1.5rem, 4vw, 2.1rem); font-weight:800; text-transform:uppercase; margin:2px 0 0;">My bookings</h1>
         </div>
-        <a href="/pikvero/public/search.php" class="button coral" style="padding:8px 14px; font-size:0.80rem;">
-          <i class="bi bi-plus-circle-fill"></i> Book New Court
+        <a href="/pikvero/public/customer/search.php" class="button coral" style="padding:8px 14px; font-size:0.80rem;">
+          <i class="bi bi-plus-circle-fill"></i> Book a court
         </a>
       </div>
 
@@ -372,9 +392,16 @@ if ($paymentStatus === 'success' && !empty($bookingRef) && Auth::check()) {
   <script src="/pikvero/assets/js/core/ajax.js"></script>
   <script src="/pikvero/assets/js/core/auth.js"></script>
   <script src="/pikvero/assets/js/components/navbar.js?v=2"></script>
-  <script src="/pikvero/assets/js/components/bottom-nav.js"></script>
+  <script src="/pikvero/assets/js/components/bottom-nav.js?v=<?= filemtime(__DIR__ . '/../../assets/js/components/bottom-nav.js') ?>"></script>
   <script src="/pikvero/assets/js/components/sidebar.js"></script>
   <script src="/pikvero/assets/js/components/footer.js"></script>
+  <link rel="stylesheet" href="/pikvero/assets/css/bookings-mobile.css?v=<?= filemtime(__DIR__.'/../../assets/css/bookings-mobile.css') ?>">
+  <script src="/pikvero/assets/js/components/bookings-mobile.js?v=<?= filemtime(__DIR__.'/../../assets/js/components/bookings-mobile.js') ?>"></script>
+  <link rel="stylesheet" href="/pikvero/assets/css/booking-details-mobile.css?v=<?= filemtime(__DIR__.'/../../assets/css/booking-details-mobile.css') ?>">
+  <script src="/pikvero/assets/js/vendor/qrcode.min.js"></script>
+  <link rel="stylesheet" href="/pikvero/assets/js/vendor/leaflet.css">
+  <script src="/pikvero/assets/js/vendor/leaflet.js"></script>
+  <script src="/pikvero/assets/js/components/booking-details-mobile.js?v=<?= filemtime(__DIR__.'/../../assets/js/components/booking-details-mobile.js') ?>"></script>
   <script>
     let bookingsDataTable = null;
     let currentBookingsMap = {};
@@ -384,6 +411,10 @@ if ($paymentStatus === 'success' && !empty($bookingRef) && Auth::check()) {
       await NavbarComponent.render('#navbar-container', true);
       SidebarComponent.render('bookings', 'customer');
       FooterComponent.render('#footer-container', true);
+      if (matchMedia('(max-width:768px)').matches) {
+        window.initMobileBookings();
+        return;
+      }
 
       // Initialize Server-side DataTables
       bookingsDataTable = $('#customer-bookings-table').DataTable({
@@ -503,7 +534,7 @@ if ($paymentStatus === 'success' && !empty($bookingRef) && Auth::check()) {
               <i class="bi bi-ticket-perforated" style="font-size:2rem; color:#888; display:block; margin-bottom:8px;"></i>
               <strong style="font-size:1rem; text-transform:uppercase;">No Court Bookings Found</strong>
               <p style="font-size:0.82rem; color:#5a7060; margin-top:4px;">You have no reservations matching your filter search.</p>
-              <a href="/pikvero/public/search.php" class="button coral" style="padding:8px 16px; font-size:0.8rem; margin-top:10px; inline-block;">Find Courts &amp; Book</a>
+              <a href="/pikvero/public/customer/search.php" class="button coral" style="padding:8px 16px; font-size:0.8rem; margin-top:10px; inline-block;">Find Courts &amp; Book</a>
             </div>
           `
         }
@@ -511,6 +542,10 @@ if ($paymentStatus === 'success' && !empty($bookingRef) && Auth::check()) {
     });
 
     function reloadBookingsTable() {
+      if (matchMedia('(max-width:768px)').matches && window.reloadMobileBookings) {
+        window.reloadMobileBookings();
+        return;
+      }
       if (bookingsDataTable) {
         bookingsDataTable.ajax.reload();
       }
@@ -655,10 +690,15 @@ if ($paymentStatus === 'success' && !empty($bookingRef) && Auth::check()) {
     <?php if ($paymentSuccessNotice): ?>
       $(document).ready(function() {
         setTimeout(function() {
-          Toast.success('Payment Confirmed!', 'Reservation <?= $confirmedBookingRef ?> is now paid & confirmed.');
+          if (!matchMedia('(max-width:768px)').matches) Toast.success('Payment Confirmed!', 'Reservation <?= $confirmedBookingRef ?> is now paid & confirmed.');
         }, 400);
       });
     <?php endif; ?>
   </script>
+  <?php if ($confirmationData): ?>
+  <link rel="stylesheet" href="/pikvero/assets/css/booking-confirmed.css?v=<?= filemtime(__DIR__.'/../../assets/css/booking-confirmed.css') ?>">
+  <script src="/pikvero/assets/js/components/booking-confirmed.js?v=<?= filemtime(__DIR__.'/../../assets/js/components/booking-confirmed.js') ?>"></script>
+  <script>if (matchMedia('(max-width:768px)').matches) showBookingConfirmed(<?= json_encode($confirmationData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);</script>
+  <?php endif; ?>
 </body>
 </html>

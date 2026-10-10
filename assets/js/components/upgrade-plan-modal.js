@@ -116,7 +116,7 @@ const UpgradePlanModal = (function() {
 
     container.innerHTML = allPlans.map(p => {
       const isCurrent = (parseInt(p.id) === activePlanId);
-      const isFree = parseInt(p.is_free_trial) === 1;
+      const isFree = parseInt(p.is_free_trial) === 1 && !currentSubData?.has_used_free_trial;
       const trialMonths = p.trial_duration_months || 1;
       const features = p.features || [];
 

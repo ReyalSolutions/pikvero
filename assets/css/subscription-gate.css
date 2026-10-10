@@ -1,0 +1,9 @@
+#subscription-alert-modal { background: rgba(10,20,15,.85) !important; }
+#subscription-alert-modal .card-streetside { background: #fff !important; color: #0c1a15; }
+#subscription-alert-modal button[hidden] { display: none !important; }
+@media (max-width: 768px) {
+  #subscription-alert-modal .card-streetside { padding: 20px 16px !important; box-shadow: none !important; border: 1px solid #cbd5e1 !important; }
+  #subscription-alert-modal #sam-plans-container { grid-template-columns: minmax(0, 1fr) !important; }
+  #subscription-alert-modal button, #subscription-alert-modal a { min-height: 44px; white-space: normal; }
+  #subscription-alert-modal #sam-cycle-monthly, #subscription-alert-modal #sam-cycle-yearly { padding: 8px !important; flex: 1; }
+}

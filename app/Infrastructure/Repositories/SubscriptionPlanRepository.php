@@ -52,8 +52,8 @@ class SubscriptionPlanRepository {
         $trialMonths = isset($data['trial_duration_months']) ? max(1, (int)$data['trial_duration_months']) : 1;
         $trialStart  = !empty($data['trial_start_date']) ? $data['trial_start_date'] : null;
         $trialEnd    = !empty($data['trial_end_date']) ? $data['trial_end_date'] : null;
-        $monthlyPrice = $isFreeTrial ? 0.00 : (float)($data['monthly_price'] ?? 0);
-        $yearlyPrice  = $isFreeTrial ? 0.00 : (isset($data['yearly_price']) && (float)$data['yearly_price'] > 0 ? (float)$data['yearly_price'] : round($monthlyPrice * 12 * 0.70, 2));
+        $monthlyPrice = (float)($data['monthly_price'] ?? 0);
+        $yearlyPrice  = (isset($data['yearly_price']) && (float)$data['yearly_price'] > 0 ? (float)$data['yearly_price'] : round($monthlyPrice * 12 * 0.70, 2));
 
         $sql = "INSERT INTO subscription_plans (name, slug, monthly_price, yearly_price, is_free_trial, trial_duration_months, trial_start_date, trial_end_date, max_facilities, max_courts, max_staff, description)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -87,8 +87,8 @@ class SubscriptionPlanRepository {
         $trialMonths = isset($data['trial_duration_months']) ? max(1, (int)$data['trial_duration_months']) : 1;
         $trialStart  = !empty($data['trial_start_date']) ? $data['trial_start_date'] : null;
         $trialEnd    = !empty($data['trial_end_date']) ? $data['trial_end_date'] : null;
-        $monthlyPrice = $isFreeTrial ? 0.00 : (float)($data['monthly_price'] ?? 0);
-        $yearlyPrice  = $isFreeTrial ? 0.00 : (isset($data['yearly_price']) && (float)$data['yearly_price'] > 0 ? (float)$data['yearly_price'] : round($monthlyPrice * 12 * 0.70, 2));
+        $monthlyPrice = (float)($data['monthly_price'] ?? 0);
+        $yearlyPrice  = (isset($data['yearly_price']) && (float)$data['yearly_price'] > 0 ? (float)$data['yearly_price'] : round($monthlyPrice * 12 * 0.70, 2));
 
         $sql = "UPDATE subscription_plans 
                 SET name = ?, slug = ?, monthly_price = ?, yearly_price = ?, is_free_trial = ?, trial_duration_months = ?, trial_start_date = ?, trial_end_date = ?, max_facilities = ?, max_courts = ?, max_staff = ?, description = ?
@@ -263,7 +263,28 @@ class SubscriptionPlanRepository {
         ];
     }
 
-    public function getTenantSubscriptionSummary(int $orgId = 0): array {
+    public function hasUsedFreeTrial(int $orgId = 0, int $ownerId = 0): bool {
+        if ($orgId <= 0 && $ownerId <= 0) return false;
+        if ($ownerId <= 0) {
+            $org = $this->db->selectOne("SELECT owner_id FROM organizations WHERE id = ?", [$orgId], 'i');
+            $ownerId = (int)($org['owner_id'] ?? 0);
+        }
+        $used = $this->db->selectOne("
+            SELECT sp.id FROM subscription_payments sp
+            JOIN subscriptions s ON s.id = sp.subscription_id
+            JOIN organizations o ON o.id = s.organization_id
+            JOIN subscription_plans p ON p.id = s.plan_id
+            WHERE (o.id = ? OR o.owner_id = ?)
+              AND sp.payment_status IN ('paid', 'completed')
+              AND (LOWER(sp.payment_method) LIKE '%free_trial%'
+                   OR LOWER(sp.payment_method) LIKE '%free trial%'
+                   OR (sp.amount = 0 AND p.is_free_trial = 1))
+            LIMIT 1
+        ", [$orgId, $ownerId], 'ii');
+        return !empty($used);
+    }
+
+    public function getTenantSubscriptionSummary(int $orgId = 0, bool $allowFallback = true): array {
         $sub = null;
 
         if ($orgId > 0) {
@@ -277,7 +298,7 @@ class SubscriptionPlanRepository {
                 ORDER BY s.id DESC LIMIT 1
             ", [$orgId], 'i');
 
-            if (!$sub) {
+            if (!$sub && $allowFallback) {
                 $starter = $this->db->selectOne("SELECT id FROM subscription_plans ORDER BY id ASC LIMIT 1");
                 if ($starter) {
                     $this->subscribeTenantToPlan($orgId, (int)$starter['id'], 'monthly');
@@ -294,7 +315,7 @@ class SubscriptionPlanRepository {
             }
         }
 
-        if (!$sub) {
+        if (!$sub && $allowFallback) {
             $sub = $this->db->selectOne("
                 SELECT s.*, sp.name AS plan_name, sp.slug AS plan_slug, sp.monthly_price, sp.yearly_price,
                        sp.max_facilities, sp.max_courts, sp.max_staff, sp.description AS plan_description,
@@ -328,6 +349,7 @@ class SubscriptionPlanRepository {
 
         return [
             'subscription' => $sub,
+            'has_used_free_trial' => $this->hasUsedFreeTrial($orgId),
             'usage' => [
                 'facilities' => $facCount,
                 'courts' => $courtCount,
@@ -361,7 +383,7 @@ class SubscriptionPlanRepository {
         }
 
         $isYearly = ($billingCycle === 'yearly');
-        $isFree   = ((int)($plan['is_free_trial'] ?? 0) === 1);
+        $isFree   = ((int)($plan['is_free_trial'] ?? 0) === 1) && !$this->hasUsedFreeTrial($orgId);
 
         $monthsToAdd = $isFree ? max(1, (int)($plan['trial_duration_months'] ?? 1)) : ($isYearly ? 12 : 1);
         
@@ -395,6 +417,9 @@ class SubscriptionPlanRepository {
 
         if (!empty($customPaymentNote)) {
             $paymentNote = $customPaymentNote;
+        }
+        if ($isFree && stripos($paymentNote, 'free trial') === false) {
+            $paymentNote = 'Free Trial Promo | ' . $paymentNote;
         }
 
         if ($prevCycle === 'monthly' && $isYearly && $existing) {

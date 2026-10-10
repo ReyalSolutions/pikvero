@@ -194,7 +194,11 @@ class SubscriptionController {
         $ref    = trim($data['payment_ref'] ?? '');
         $method = trim($data['payment_method'] ?? 'PayMongo');
 
-        if (!$planId) Response::error('plan_id is required.');
+        if (!$planId && !empty($data['plan_id'])) {
+            $plan = $this->repo->findBySlug(trim((string)$data['plan_id']));
+            $planId = (int)($plan['id'] ?? 0);
+        }
+        if (!$planId) Response::error('A valid subscription plan is required.');
 
         $paymentNote = !empty($ref) ? "PayMongo ({$method}) Ref #{$ref}" : '';
 

@@ -1,0 +1,38 @@
+/* Player dashboard: compact cards using the public page palette. */
+.player-dashboard .dash-title { text-transform:none!important; letter-spacing:-.035em; }
+.player-dashboard .dash-profile-row {display:flex;align-items:center;gap:12px;}
+.player-dashboard .dash-profile-details {min-width:0;flex:1;}
+.player-dashboard .dash-avatar {width:44px;height:44px;flex:0 0 44px;background:#ff654f;color:#fff;border:0;box-shadow:none;}
+.player-dashboard .dash-welcome {font-size:.75rem;color:#52665e;margin-bottom:3px;}
+.player-dashboard .dash-player-name {font-size:1.2rem;margin:0;line-height:1.2;overflow-wrap:anywhere;}
+.player-dashboard .dash-player-email {font-size:.75rem;margin:4px 0 0;color:#52665e;overflow-wrap:anywhere;}
+.player-dashboard .dash-profile-link {display:grid;place-items:center;min-width:44px;min-height:44px;border-radius:12px;color:#0b5145;background:#edf6f2;font-size:1.25rem;}
+.player-dashboard .dash-profile-link:focus-visible {outline:3px solid #0b5145;outline-offset:2px;}
+@media(max-width:768px){
+ .player-dashboard {background:#f6f8f5;}
+ .player-dashboard .portal-main {padding:18px 16px calc(90px + env(safe-area-inset-bottom))!important;}
+ .player-dashboard .dash-header-wrap {margin-bottom:16px!important;}
+ .player-dashboard .eyebrow {font-size:.65rem;letter-spacing:.13em;color:#52665e;}
+ .player-dashboard .dash-title {font-size:1.5rem!important;margin-top:5px!important;}
+ .player-dashboard .dash-card-compact,.player-dashboard .dash-booking-card {border:1px solid #dce5df;border-radius:16px!important;box-shadow:0 2px 8px #12352a08!important;transform:none!important;}
+ .player-dashboard #customer-profile-card {background:#fff;padding:16px!important;margin-bottom:12px!important;}
+ .player-dashboard .dash-open-play {background:#ecf5eb;padding:16px!important;gap:12px!important;margin-bottom:22px!important;}
+ .player-dashboard .dash-open-play>div {width:100%;}
+ .player-dashboard .dash-open-play>div>div:first-child {flex-wrap:wrap;gap:6px!important;margin-bottom:8px!important;}
+ .player-dashboard .dash-open-play h3 {font-size:1.15rem!important;text-transform:none!important;letter-spacing:-.02em;}
+ .player-dashboard .badge-streetside {border:0;box-shadow:none;border-radius:6px;font-size:.65rem!important;}
+ .player-dashboard .button {min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;box-shadow:none;border-radius:11px;text-transform:none;font-size:.8rem!important;}
+ .player-dashboard .dash-open-play>a {width:100%;background:#d2fa28;color:#10291e;}
+ .player-dashboard .dash-reservations-heading {align-items:center!important;gap:10px!important;}
+ .player-dashboard .dash-reservations-heading h3 {font-family:inherit;font-size:1rem!important;font-weight:800;color:#142c23!important;}
+ .player-dashboard .dash-reservations-heading>div {margin-left:auto;}
+ .player-dashboard .dash-reservations-heading .button.sand {background:transparent;padding:0 8px!important;color:#0b5145;}
+ .player-dashboard .dash-reservations-heading .button.coral {display:none;}
+ .player-dashboard .dash-empty-state {max-width:none!important;margin:0!important;padding:24px 20px!important;background:#fff;}
+ .player-dashboard .dash-empty-state .brand-mark {border:0;box-shadow:none;width:44px!important;height:44px!important;background:#edf6f2!important;color:#0b5145;}
+ .player-dashboard .dash-empty-state h4 {text-transform:none!important;letter-spacing:-.02em;font-size:1.05rem!important;}
+ .player-dashboard .dash-empty-state p {margin:8px auto 16px!important;max-width:260px;line-height:1.5!important;}
+ .player-dashboard .dash-empty-state .button {background:#ff654f;min-width:150px;}
+ .player-dashboard .dash-booking-card {padding:14px!important;background:#fff;overflow-wrap:anywhere;}
+ .player-dashboard .dash-booking-card h4 {text-transform:none!important;line-height:1.4;}
+}

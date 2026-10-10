@@ -174,6 +174,7 @@ if ($orgId) {
       th { background: #e5e5e5 !important; }
     }
   </style>
+<?php require_once __DIR__ . '/../../includes/subscription-gate.php'; ?>
 </head>
 <body>
 

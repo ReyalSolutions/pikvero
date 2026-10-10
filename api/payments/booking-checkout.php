@@ -56,12 +56,13 @@ if (in_array($booking['booking_status'], ['cancelled', 'expired', 'refunded'], t
 $settingRepo = new SystemSettingRepository();
 $allSettings = $settingRepo->getAllAsMap();
 
-$platformFeePct = (float)($allSettings['platform_commission_pct'] ?? $allSettings['platform_fee_percent'] ?? 10.0);
-$paymongoFeePct  = (float)($allSettings['paymongo_fee_percent'] ?? 2.5);
+$platformFeePct = (float)($allSettings['platform_commission_pct'] ?? $allSettings['platform_fee_percent'] ?? 0);
+$paymongoFeePct = (float)($allSettings['paymongo_fee_percent'] ?? 0);
+$passGatewayFee = ($allSettings['payment_gateway_fee_pass'] ?? '0') === '1';
 
 $basePrice   = (float)$booking['total_amount'];
 $platformFee = round($basePrice * ($platformFeePct / 100), 2);
-$gatewayFee  = round($basePrice * ($paymongoFeePct / 100), 2);
+$gatewayFee  = $passGatewayFee ? round($basePrice * ($paymongoFeePct / 100), 2) : 0.0;
 $grandTotal  = $basePrice + $platformFee + $gatewayFee;
 
 $secretKey = trim($allSettings['paymongo_secret_key'] ?? '');
@@ -89,6 +90,15 @@ foreach ($paymongoTypeMap as $settingId => $apiType) {
 }
 if (empty($paymentMethodTypes)) {
     $paymentMethodTypes = ['gcash'];
+}
+
+// Honor the method chosen on the mobile payment screen.
+$selectedChannel = trim((string)($input['payment_channel'] ?? ''));
+if ($selectedChannel !== '') {
+    if (!in_array($selectedChannel, $paymentMethodTypes, true)) {
+        Response::error('The selected payment method is unavailable. Please choose another method.');
+    }
+    $paymentMethodTypes = [$selectedChannel];
 }
 
 // Build URLs
@@ -124,16 +134,9 @@ $checkoutPayload = [
                 ],
                 [
                     'currency'    => 'PHP',
-                    'amount'      => (int)round($platformFee * 100),
-                    'description' => "Platform Service Fee (" . number_format($platformFeePct, 1) . "%)",
-                    'name'        => "Platform Service Fee",
-                    'quantity'    => 1
-                ],
-                [
-                    'currency'    => 'PHP',
-                    'amount'      => (int)round($gatewayFee * 100),
-                    'description' => "PayMongo Online Processing Fee (" . number_format($paymongoFeePct, 1) . "%)",
-                    'name'        => "PayMongo Gateway Fee",
+                    'amount'      => (int)round(($platformFee + $gatewayFee) * 100),
+                    'description' => 'Service fees',
+                    'name'        => 'Service fees',
                     'quantity'    => 1
                 ]
             ],
@@ -145,6 +148,11 @@ $checkoutPayload = [
 ];
 
 // Call PayMongo API
+// Do not send zero-value fee line items when the facility covers the fee.
+$checkoutPayload['data']['attributes']['line_items'] = array_values(array_filter(
+    $checkoutPayload['data']['attributes']['line_items'],
+    fn($item) => $item['amount'] > 0
+));
 $apiUrl = 'https://api.paymongo.com/v1/checkout_sessions';
 $authHeader = 'Basic ' . base64_encode($secretKey . ':');
 

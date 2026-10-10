@@ -716,8 +716,9 @@ $user = $isLoggedIn ? Auth::user() : [];
       }
     }
   </style>
+  <link rel="stylesheet" href="<?= $basePath ?>/assets/css/public-mobile.css?v=<?= filemtime(__DIR__ . '/../assets/css/public-mobile.css') ?>">
 </head>
-<body>
+<body class="open-play-page">
 
   <!-- GLOBAL REUSABLE HEADER -->
   <?php require_once __DIR__ . '/../includes/header.php'; ?>
@@ -738,18 +739,18 @@ $user = $isLoggedIn ? Auth::user() : [];
           </a>
         <?php else: ?>
           <a href="<?= $basePath ?>/public/login?redirect=<?= urlencode($basePath . '/public/open-play') ?>" class="btn-hero-cta">
-            <i class="bi bi-box-arrow-in-right"></i> Log In to Join Pass
+            <i class="bi bi-box-arrow-in-right"></i> Log in to join
           </a>
         <?php endif; ?>
       </div>
 
       <h1 class="op-hero-title">
-        <span class="title-dark">OPEN PLAY</span>
-        <span class="title-coral">SESSIONS</span>
+        <span class="title-dark">Open play</span>
+        <span class="title-coral">sessions</span>
       </h1>
 
       <p class="op-hero-desc">
-        Drop-in social games with fair paddle-stack rotation. No partner required — pay a fixed pass, hit the court, and meet local pickleball players!
+        Join local social games at a fixed entry fee. All skill levels welcome, no partner needed.
       </p>
 
       <div class="op-benefits-row">
@@ -764,7 +765,7 @@ $user = $isLoggedIn ? Auth::user() : [];
     <section class="op-filter-capsule">
       <div class="op-search-wrap">
         <i class="bi bi-search search-icon"></i>
-        <input type="text" id="op-search-input" class="op-search-input" placeholder="Search session title, venue, or city..." autocomplete="off">
+        <input type="text" id="op-search-input" class="op-search-input" aria-label="Search sessions or venues" placeholder="Search sessions or venues" autocomplete="off">
         <button type="button" id="op-search-clear" class="op-clear-btn" onclick="clearOpSearch()" aria-label="Clear Search">&times;</button>
       </div>
 
@@ -1111,11 +1112,7 @@ $user = $isLoggedIn ? Auth::user() : [];
     function handleReserveClick(sessionId) {
       const base = window.APP_BASE_PATH || '';
       if (!isLoggedIn) {
-        if (typeof Toast !== 'undefined') {
-          Toast.error('Login Required', 'Please log in to your account to reserve or join an Open Play session.');
-        } else {
-          alert('Please log in to your account to reserve or join an Open Play session.');
-        }
+        Toast.error('Login Required', 'Please log in to your account to reserve or join an Open Play session.');
         setTimeout(() => {
           window.location.href = base + '/public/login?redirect=' + encodeURIComponent(window.location.pathname);
         }, 1000);

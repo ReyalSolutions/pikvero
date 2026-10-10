@@ -437,18 +437,27 @@
       font-size: 0.8rem;
     }
   </style>
+<link rel="stylesheet" href="/pikvero/assets/css/facility-mobile.css?v=<?= filemtime(__DIR__.'/../assets/css/facility-mobile.css') ?>">
+<link rel="manifest" href="/pikvero/manifest.webmanifest">
+<meta name="theme-color" content="#003d2d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pikvero">
+<link rel="apple-touch-icon" href="/pikvero/assets/images/pwa/icon-180.png">
+<script defer src="/pikvero/assets/js/components/pwa.js?v=20261010"></script>
 </head>
-<body>
+<body class="facility-mobile">
 
   <?php require_once __DIR__ . '/../includes/header.php'; ?>
 
   <div class="facility-page-container" style="padding:110px max(4vw, 20px) 40px;">
 
+    <header class="facility-mobile-bar"><button type="button" id="facility-view-back" aria-label="Back"><i class="bi bi-chevron-left"></i></button><strong id="facility-view-title">Facility details</strong><button type="button" id="facility-favorite-btn" aria-label="Save facility"><i class="bi bi-heart"></i></button></header>
     <!-- Facility Header Banner -->
     <div id="facility-header-card" class="card-streetside sky" style="margin-bottom:24px; padding:24px;">
       <div class="skeleton skeleton-header"></div>
     </div>
 
+    <nav class="facility-detail-tabs" aria-label="Facility sections"><button data-fac-section="overview" class="active">Overview</button><button data-fac-section="courts">Courts</button><button data-fac-section="reviews">Reviews</button><button data-fac-section="about">About</button></nav>
     <!-- Facility Amenities Gallery Strip -->
     <div id="facility-gallery" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:28px;">
       <!-- Loaded from DB amenities -->
@@ -505,7 +514,7 @@
             <div style="display:flex; gap:8px;">
               <button type="button" onclick="clearSelectedSlots()" class="button sand" style="padding:8px 14px; font-size:0.78rem;">Clear</button>
               <button type="button" onclick="confirmMultiSlotBookingModal()" class="button coral" style="padding:9px 20px; font-size:0.84rem;">
-                Book Reserved Hours <i class="bi bi-arrow-right"></i>
+                Continue <i class="bi bi-arrow-right"></i>
               </button>
             </div>
           </div>
@@ -572,7 +581,7 @@
       </div>
 
       <!-- Reviews & Cancellation -->
-      <div class="card-streetside" style="padding:20px; background:var(--white);">
+      <div class="card-streetside fac-reviews-card" style="padding:20px; background:var(--white);">
         <h4 style="font-size:1.1rem; font-weight:800; text-transform:uppercase; margin:0 0 8px;">
           <i class="bi bi-star-fill" style="color:#f59e0b;"></i> REVIEWS &amp; RATING
         </h4>
@@ -670,13 +679,16 @@
         setTimeout(() => startCardCarouselAutoplay(carouselId, images.length), 100);
       }
 
+      const counterHtml = images.length > 0 ? `<span class="facility-photo-counter">1/${images.length}</span>` : '';
+
       return `
-        <div style="position:relative; height:${h}; width:100%; border-bottom:2px solid var(--ink); overflow:hidden; background:#111; border-top-left-radius:12px; border-top-right-radius:12px;">
+        <div class="facility-photo-carousel" data-carousel-id="${carouselId}" data-photo-count="${images.length}" style="position:relative; height:${h}; width:100%; border-bottom:2px solid var(--ink); overflow:hidden; background:#111; border-top-left-radius:12px; border-top-right-radius:12px;">
           <div id="track-${carouselId}" style="display:flex; height:100%; width:100%; transition:transform 0.35s ease;" data-index="0">
             ${slidesHtml}
           </div>
           ${navBtnsHtml}
           ${dotsHtml}
+          ${counterHtml}
         </div>
       `;
     }
@@ -694,6 +706,8 @@
 
       track.setAttribute('data-index', currentIndex);
       track.style.transform = `translateX(-${currentIndex * 100}%)`;
+      const counter = track.parentElement.querySelector('.facility-photo-counter');
+      if (counter) counter.textContent = `${currentIndex + 1}/${totalCount}`;
 
       const dots = document.querySelectorAll('.dot-' + carouselId);
       dots.forEach((dot, idx) => {
@@ -770,9 +784,14 @@
         : '';
       
       var facilityCarouselHtml = '';
-      if (facility.images && facility.images.length > 0) {
-        facilityCarouselHtml = buildCardCarouselHtml('fac-header', facility, '260px');
+      var heroItem = $.extend(true, {}, facility);
+      if (!heroItem.images || heroItem.images.length === 0) {
+        var firstCourtWithImages = (courts || []).find(function(c) { return c.images && c.images.length > 0; });
+        heroItem.images = firstCourtWithImages
+          ? firstCourtWithImages.images
+          : [{ image_path: '/pikvero/assets/images/bg-search.png' }];
       }
+      facilityCarouselHtml = buildCardCarouselHtml('fac-header', heroItem, '260px');
 
       var courtCountBadge = (courts && courts.length > 0)
         ? '<span class="mono" style="font-weight:800;color:var(--green);">' + courts.length + ' COURT' + (courts.length !== 1 ? 'S' : '') + '</span>'
@@ -812,7 +831,7 @@
         $('#facility-gallery').hide();
         return;
       }
-      var html = $.map(amenities.slice(0, 4), function(a, i) {
+      var html = $.map(amenities.slice(0, 6), function(a, i) {
         var bg = GALLERY_COLORS[i % GALLERY_COLORS.length];
         return '<div class="card-streetside" style="padding:20px;background:var(--' + bg + ');text-align:center;">'
           + '<i class="bi ' + (a.icon || 'bi-check-circle') + '" style="font-size:2rem;color:var(--ink);"></i>'
@@ -830,10 +849,13 @@
       }
       var html = $.map(courts, function(c) {
         var badge = COURT_BADGE[c.court_type] || { label: (c.court_type || 'COURT').toUpperCase(), cls: 'dark' };
-        var price = parseFloat(c.base_price_per_hour || 0).toFixed(2);
+        var priceValue = parseFloat(c.base_price_per_hour || 0);
+        var price = Number.isInteger(priceValue) ? priceValue.toFixed(0) : priceValue.toFixed(2);
+        var courtTypeLabel = c.court_type ? c.court_type.charAt(0).toUpperCase() + c.court_type.slice(1) : 'Court';
+        var surfaceLabel = c.surface_type ? c.surface_type.replace(/_/g,' ').replace(/\b\w/g, function(ch) { return ch.toUpperCase(); }) : 'Standard';
         var courtCarouselHtml = buildCardCarouselHtml('facility-court', c, '150px');
 
-        return '<div class="card-streetside court-item" id="court-card-' + c.id + '" data-court-name="' + c.name + '" onclick="selectCourt(' + c.id + ')" style="padding:0; overflow:hidden;">'
+        return '<div class="card-streetside court-item" id="court-card-' + c.id + '" data-court-type="' + c.court_type + '" data-court-name="' + c.name + '" onclick="selectCourt(' + c.id + ')" style="padding:0; overflow:hidden;">'
           + '<div class="court-selected-indicator" style="display:none; background:var(--ink); color:var(--lime); padding:6px 12px; font-family:\'DM Mono\', monospace; font-size:0.75rem; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; border-bottom:2px solid var(--ink); justify-content:space-between; align-items:center;">'
           +   '<span><i class="bi bi-check-circle-fill" style="color:var(--lime); margin-right:6px;"></i> SELECTED COURT</span>'
           +   '<span style="font-size:0.65rem; background:var(--lime); color:var(--ink); padding:2px 6px; border-radius:4px; font-weight:900;">ACTIVE VIEW</span>'
@@ -845,8 +867,8 @@
           +   '<span class="badge-streetside ' + badge.cls + '" style="font-size:0.62rem;">' + badge.label + '</span>'
           + '</div>'
           + '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:0.85rem;">'
-          +   '<span style="color:#4a5c56;">' + (c.surface_type ? c.surface_type.replace(/_/g,' ') : '') + '</span>'
-          +   '<strong style="color:var(--green);">&#8369;' + price + '/hr</strong>'
+          +   '<span style="color:#4a5c56;">' + courtTypeLabel + ' · ' + surfaceLabel + '</span>'
+          +   '<strong style="color:var(--green);">&#8369;' + price + ' / hour</strong>'
           + '</div>'
           + '</div>'
           + '</div>';
@@ -899,10 +921,13 @@
     // ── Render facility products & marketplace items ──────────────────────────
     function renderProducts(products) {
       var $grid = $('#facility-products-grid');
+      products = (products || []).filter(p => Number(p.facility_id) === Number(facilityId));
       if (!products || products.length === 0) {
-        $grid.html('<div class="card-streetside sand" style="grid-column:1/-1; padding:20px; text-align:center;"><p style="margin:0; font-size:0.85rem; font-weight:700; color:#555;">No marketplace products currently listed for this facility.</p></div>');
+        $grid.empty();
+        $('#facility-marketplace-wrap').hide();
         return;
       }
+      $('#facility-marketplace-wrap').show();
 
       var html = $.map(products, function(p) {
         var isRental = p.type === 'rental';
@@ -1100,7 +1125,7 @@
                 + '<span style="font-size:0.68rem;opacity:0.85;">' + (isSelected ? '✓ ' : '') + '&#8369;' + price + '</span>'
                 + '</button>';
             } else {
-              return '<button disabled class="button sand slot-btn booked">'
+              return '<button disabled data-slot-start="' + displayStart + '" data-slot-key="' + slotKey + '" class="button sand slot-btn booked">'
                 + '<strong>' + displayStart + '–' + displayEnd + '</strong>'
                 + '<span style="font-size:0.68rem;">' + (slot.reason || 'Booked') + '</span>'
                 + '</button>';
@@ -1155,6 +1180,11 @@
           </div>
         `).join('');
 
+        if (matchMedia('(max-width:768px)').matches && window.showMobileBookingSummary) {
+          window.showMobileBookingSummary({ courtId, courtName, date, earliestStart, latestEnd, totalHours, totalPrice, itemizedListHtml });
+          return;
+        }
+
         // Payment method selector cards
         const paymentMethodHtml = `
           <div style="margin-top:16px; margin-bottom:4px;">
@@ -1177,7 +1207,7 @@
         `;
 
         Modal.confirm({
-          title: 'CONFIRM RESERVATION',
+          title: 'Booking Summary',
           message:
             '<div style="font-size:0.9rem;">'
             + '<p style="margin-bottom:8px;"><strong>Court:</strong> ' + courtName + '</p>'
@@ -1187,7 +1217,7 @@
             + '<p style="margin-bottom:0; font-size:1.05rem;"><strong>Total Amount:</strong> <span style="color:var(--green); font-weight:900;">&#8369;' + totalPrice.toFixed(2) + '</span></p>'
             + paymentMethodHtml
             + '</div>',
-          confirmText: 'Confirm Reservation',
+          confirmText: 'Proceed to payment',
           onConfirm: function() {
             // Read selected payment method from the modal
             const selectedMethod = document.querySelector('#payment-method-selector .pm-card.selected');
@@ -1219,23 +1249,7 @@
                     Toast.success(toastTitle, toastMsg, 6000);
                     Toast.setFlash(toastTitle, toastMsg, 'success', 6000);
 
-                    Modal.alert({
-                      title: 'RESERVATION RESERVED! 🎾',
-                      message: `
-                        <div style="text-align:center; padding:10px 0;">
-                          <div style="font-size:3rem; margin-bottom:8px;">✅</div>
-                          <h3 style="font-family:'DM Mono', monospace; font-size:1.3rem; margin-bottom:6px; color:var(--ink);">#${bookingRef}</h3>
-                          <p style="font-size:0.88rem; color:#3b4e48; margin-bottom:14px; line-height:1.4;">Your court schedule is reserved! Please pay <strong>&#8369;${totalPrice.toFixed(2)}</strong> at the facility counter upon arrival.</p>
-                          <div style="background:var(--sand); border:2px solid var(--ink); border-radius:10px; padding:8px 14px; font-size:0.8rem; display:inline-block;">
-                            <strong>Payment Status:</strong> <span class="badge-streetside" style="background:#fef08a; color:#854d0e;">UNPAID (Pay at Counter)</span>
-                          </div>
-                        </div>
-                      `,
-                      buttonText: 'View My Bookings',
-                      onConfirm: function() {
-                        window.location.href = '/pikvero/public/customer/bookings.php';
-                      }
-                    });
+                    setTimeout(() => { window.location.href = '/pikvero/public/customer/bookings.php'; }, 1500);
                   } else {
                     Toast.error('Booking Failed', res.message || 'Could not create reservation.');
                   }
@@ -1253,7 +1267,7 @@
     }
 
     // ── Open Place Order Modal for Online Payments ────────────────────────────
-    function openPlaceOrderModal(courtId, courtName, date, earliestStart, latestEnd, totalHours, totalPrice, itemizedListHtml) {
+    function openPlaceOrderModal(courtId, courtName, date, earliestStart, latestEnd, totalHours, totalPrice, itemizedListHtml, extras = {}) {
       const platformFeePct = (!isNaN(window.platformFeePct) && window.platformFeePct !== null) ? window.platformFeePct : 10.0;
       const paymongoFeePct  = (!isNaN(window.paymongoFeePct) && window.paymongoFeePct !== null) ? window.paymongoFeePct : 2.5;
 
@@ -1288,12 +1302,8 @@
                 <strong>&#8369;${basePrice.toFixed(2)}</strong>
               </div>
               <div style="display:flex; justify-content:space-between; color:#4a5c56;">
-                <span>Platform Service Fee (${platformFeePct.toFixed(1)}%):</span>
-                <strong>&#8369;${platformFee.toFixed(2)}</strong>
-              </div>
-              <div style="display:flex; justify-content:space-between; color:#4a5c56;">
-                <span>PayMongo Gateway Fee (${paymongoFeePct.toFixed(1)}%):</span>
-                <strong>&#8369;${gatewayFee.toFixed(2)}</strong>
+                <span>Service fees:</span>
+                <strong>&#8369;${(platformFee + gatewayFee).toFixed(2)}</strong>
               </div>
             </div>
 
@@ -1315,7 +1325,7 @@
 
       setTimeout(function() {
         Modal.confirm({
-          title: 'PLACE ORDER & ONLINE PAYMENT',
+          title: 'Booking Summary',
           message: orderSummaryHtml,
           confirmText: 'Place Order & Pay ₱' + grandTotal.toFixed(2),
           onConfirm: function() {
@@ -1330,7 +1340,9 @@
                 date:           date,
                 start_time:     earliestStart,
                 end_time:       latestEnd,
-                payment_method: 'online'
+                payment_method: 'online',
+                notes: extras.notes || '',
+                addons: extras.addons || []
               }),
               success: function(res) {
                 if (!res.success) {
@@ -1427,10 +1439,13 @@
           var courts    = res.data.courts   || [];
           var amenities = res.data.amenities || [];
           var products  = res.data.products  || [];
+          window.facilityBookingData = { facility, courts, products, paymentMethods: res.data.payment_methods || [] };
 
           if (res.data.fees) {
             window.platformFeePct = parseFloat(res.data.fees.platform_fee_percent);
-            window.paymongoFeePct = parseFloat(res.data.fees.paymongo_fee_percent);
+            window.paymongoConfiguredFeePct = parseFloat(res.data.fees.paymongo_fee_percent);
+            window.passGatewayFee = res.data.fees.pass_gateway_fee === true;
+            window.paymongoFeePct = window.passGatewayFee ? window.paymongoConfiguredFeePct : 0;
           }
 
           renderHeader(facility, courts);
@@ -1480,5 +1495,6 @@
       loadFacility();
     });
   </script>
+<script src="/pikvero/assets/js/components/facility-mobile.js?v=<?= filemtime(__DIR__.'/../assets/js/components/facility-mobile.js') ?>"></script>
 </body>
 </html>

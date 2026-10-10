@@ -21,9 +21,14 @@ if (!$orgId && $userId > 0) {
 }
 
 $repo = new SubscriptionPlanRepository();
-$summary = $repo->getTenantSubscriptionSummary($orgId);
+$summary = $repo->getTenantSubscriptionSummary($orgId, false);
 $sub = $summary['subscription'] ?? null;
 $plans = $repo->getAllPlans();
+$hasUsedFreeTrial = $repo->hasUsedFreeTrial($orgId, $userId);
+foreach ($plans as &$plan) {
+    $plan['trial_eligible'] = (int)($plan['is_free_trial'] ?? 0) === 1 && !$hasUsedFreeTrial;
+}
+unset($plan);
 
 $hasSubscription = !empty($sub);
 $status = strtolower($sub['status'] ?? 'none');
@@ -56,7 +61,8 @@ if (!$hasSubscription) {
 $isPastDue   = ($status === 'past_due');
 $isCancelled = ($status === 'cancelled');
 
-$requiresAction = (!$hasSubscription || $isExpired || $isPastDue || $isCancelled);
+$isInactive = $hasSubscription && !in_array($status, ['active', 'trial', 'trialing'], true);
+$requiresAction = (!$hasSubscription || $isExpired || $isPastDue || $isCancelled || $isInactive);
 
 $actionReason = '';
 if (!$hasSubscription) {
@@ -67,6 +73,8 @@ if (!$hasSubscription) {
     $actionReason = 'Your subscription payment is past due. Please settle your invoice to avoid service interruption.';
 } else if ($isCancelled) {
     $actionReason = 'Your subscription has been cancelled. Subscribe to a new plan to continue using Pikvero.';
+} else if ($isInactive) {
+    $actionReason = 'Your subscription is not active. Please select or renew a plan to continue.';
 }
 
 $usage = $summary['usage'] ?? ['facilities' => 0, 'courts' => 0, 'staff' => 0];

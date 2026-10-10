@@ -7,6 +7,8 @@ require_once __DIR__ . '/../app/bootstrap.php';
 use App\Core\Auth\Session;
 use App\Core\Database\Connection;
 use App\Infrastructure\Repositories\SystemSettingRepository;
+use App\Infrastructure\Repositories\SubscriptionPlanRepository;
+use App\Core\Auth\Auth;
 
 // Dynamic base path calculation for local & live deployments
 $reqUri   = $_SERVER['REQUEST_URI'] ?? '/';
@@ -19,7 +21,9 @@ $csrfToken = Session::get('csrf_token');
 
 $db = Connection::getInstance();
 $subscriptionPlans = $db->select("SELECT * FROM subscription_plans ORDER BY monthly_price ASC");
+$hasUsedFreeTrial = (new SubscriptionPlanRepository())->hasUsedFreeTrial(0, (int)(Auth::id() ?? 0));
 foreach ($subscriptionPlans as &$p) {
+    $p['trial_eligible'] = (int)($p['is_free_trial'] ?? 0) === 1 && !$hasUsedFreeTrial;
     $p['features'] = array_column($db->select("SELECT feature FROM subscription_plan_features WHERE plan_id = ?", [(int)$p['id']], 'i'), 'feature');
 }
 unset($p);
@@ -69,7 +73,7 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
   
   <!-- Bootstrap Icons & Toast CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <link rel="stylesheet" href="<?= $basePath ?>/assets/css/toast.css">
+  <link rel="stylesheet" href="<?= $basePath ?>/assets/css/toast.css?v=<?= filemtime(__DIR__ . '/../assets/css/toast.css') ?>">
 
   <style>
     :root {
@@ -229,7 +233,7 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
     .progress-fill {
       height: 100%;
       background: linear-gradient(90deg, #ff5733, #d4f82c);
-      width: 10%;
+      width: 16.67%;
       border-radius: 99px;
       transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     }
@@ -598,8 +602,9 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
       flex-shrink: 0;
     }
   </style>
+  <link rel="stylesheet" href="<?= $basePath ?>/assets/css/onboarding.css?v=<?= filemtime(__DIR__ . '/../assets/css/onboarding.css') ?>">
 </head>
-<body>
+<body class="onboarding-page">
 
   <!-- Dynamic Edge-to-Edge Fixed Header -->
   <?php require_once __DIR__ . '/../includes/header.php'; ?>
@@ -610,9 +615,9 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
     <div class="onboarding-header-card">
       <div class="onboarding-top-bar">
         <div>
-          <span class="eyebrow-badge">SAAS PLATFORM ONBOARDING</span>
-          <h1 class="onboarding-title">BECOME A COURT OWNER</h1>
-          <p class="onboarding-subtitle">Complete the 10-step wizard to register your facility and publish courts for bookings.</p>
+          <span class="eyebrow-badge">FOR COURT OWNERS</span>
+          <h1 class="onboarding-title">Set up your facility</h1>
+          <p class="onboarding-subtitle">Set up your account and facility in six steps.</p>
         </div>
         <button type="button" onclick="clearOnboardingDraft()" class="btn-reset-draft">
           <i class="bi bi-trash"></i> Reset Draft
@@ -621,8 +626,8 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
 
       <!-- Progress Metadata -->
       <div class="progress-meta">
-        <span id="progress-step-text">STEP 1 OF 10: OWNER ACCOUNT SETUP</span>
-        <span id="progress-percent-text">10% COMPLETE</span>
+        <span id="progress-step-text">STEP 1 OF 6: ACCOUNT</span>
+        <span id="progress-percent-text">17% COMPLETE</span>
       </div>
       
       <!-- Animated Progress Bar -->
@@ -630,48 +635,14 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
         <div id="progress-fill" class="progress-fill"></div>
       </div>
 
-      <!-- Stepper 10-Step Grid Pills -->
+      <!-- Six-step progress navigation -->
       <div class="stepper-container" id="stepper-pills">
-        <div class="step-pill active" onclick="jumpToStep(1)" id="pill-1">
-          <span class="step-pill-num">1</span>
-          <span class="step-pill-name">Account</span>
-        </div>
-        <div class="step-pill" onclick="jumpToStep(2)" id="pill-2">
-          <span class="step-pill-num">2</span>
-          <span class="step-pill-name">Business</span>
-        </div>
-        <div class="step-pill" onclick="jumpToStep(3)" id="pill-3">
-          <span class="step-pill-num">3</span>
-          <span class="step-pill-name">Facility</span>
-        </div>
-        <div class="step-pill" onclick="jumpToStep(4)" id="pill-4">
-          <span class="step-pill-num">4</span>
-          <span class="step-pill-name">Docs</span>
-        </div>
-        <div class="step-pill" onclick="jumpToStep(5)" id="pill-5">
-          <span class="step-pill-num">5</span>
-          <span class="step-pill-name">Courts</span>
-        </div>
-        <div class="step-pill" onclick="jumpToStep(6)" id="pill-6">
-          <span class="step-pill-num">6</span>
-          <span class="step-pill-name">Pricing</span>
-        </div>
-        <div class="step-pill" onclick="jumpToStep(7)" id="pill-7">
-          <span class="step-pill-num">7</span>
-          <span class="step-pill-name">Hours</span>
-        </div>
-        <div class="step-pill" onclick="jumpToStep(8)" id="pill-8">
-          <span class="step-pill-num">8</span>
-          <span class="step-pill-name">Plan</span>
-        </div>
-        <div class="step-pill" onclick="jumpToStep(9)" id="pill-9">
-          <span class="step-pill-num">9</span>
-          <span class="step-pill-name">Payment</span>
-        </div>
-        <div class="step-pill" onclick="jumpToStep(10)" id="pill-10">
-          <span class="step-pill-num">10</span>
-          <span class="step-pill-name">Submit</span>
-        </div>
+        <button type="button" class="step-pill active" onclick="jumpToStep(1)" id="pill-1"><span class="step-pill-num">1</span><span class="step-pill-name">Account</span></button>
+        <button type="button" class="step-pill" onclick="jumpToStep(2)" id="pill-2"><span class="step-pill-num">2</span><span class="step-pill-name">Business &amp; Facility</span></button>
+        <button type="button" class="step-pill" onclick="jumpToStep(3)" id="pill-3"><span class="step-pill-num">3</span><span class="step-pill-name">Documents</span></button>
+        <button type="button" class="step-pill" onclick="jumpToStep(4)" id="pill-4"><span class="step-pill-num">4</span><span class="step-pill-name">Courts &amp; Rates</span></button>
+        <button type="button" class="step-pill" onclick="jumpToStep(5)" id="pill-5"><span class="step-pill-num">5</span><span class="step-pill-name">Plan &amp; Payment</span></button>
+        <button type="button" class="step-pill" onclick="jumpToStep(6)" id="pill-6"><span class="step-pill-num">6</span><span class="step-pill-name">Review</span></button>
       </div>
     </div>
 
@@ -680,11 +651,12 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
       <form id="onboarding-wizard-form" novalidate>
         <input type="hidden" id="csrf_token" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
 
-        <!-- STEP 1: CREATE ACCOUNT -->
+        <!-- STEP 1: Account -->
         <div class="wizard-step active" id="step-1">
-          <div class="step-title-header">
+          <section class="onboarding-section">
+<div class="step-title-header">
             <i class="bi bi-person-circle"></i>
-            <span>STEP 1: OWNER ACCOUNT SETUP</span>
+            <span>OWNER ACCOUNT SETUP</span>
           </div>
 
           <div class="form-row-2">
@@ -736,13 +708,15 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
               <div id="fb-cpass" class="inline-feedback"></div>
             </div>
           </div>
+          </section>
         </div>
 
-        <!-- STEP 2: BUSINESS INFORMATION -->
+        <!-- STEP 2: Business & Facility -->
         <div class="wizard-step" id="step-2">
-          <div class="step-title-header">
+          <section class="onboarding-section">
+<div class="step-title-header">
             <i class="bi bi-briefcase-fill"></i>
-            <span>STEP 2: BUSINESS INFORMATION</span>
+            <span>BUSINESS INFORMATION</span>
           </div>
 
           <div class="form-group-modern">
@@ -755,13 +729,11 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
             <input type="text" id="ob-taxid" class="input-modern" placeholder="DTI-2026-998877">
             <div id="fb-taxid" class="inline-feedback"></div>
           </div>
-        </div>
-
-        <!-- STEP 3: FACILITY INFORMATION -->
-        <div class="wizard-step" id="step-3">
-          <div class="step-title-header">
+          </section>
+          <section class="onboarding-section">
+<div class="step-title-header">
             <i class="bi bi-building"></i>
-            <span>STEP 3: FACILITY DETAILS</span>
+            <span>FACILITY DETAILS</span>
           </div>
 
           <div class="form-group-modern">
@@ -786,13 +758,15 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
               <div id="fb-province" class="inline-feedback"></div>
             </div>
           </div>
+          </section>
         </div>
 
-        <!-- STEP 4: UPLOAD DOCUMENTS -->
-        <div class="wizard-step" id="step-4">
-          <div class="step-title-header">
+        <!-- STEP 3: Documents -->
+        <div class="wizard-step" id="step-3">
+          <section class="onboarding-section">
+<div class="step-title-header">
             <i class="bi bi-file-earmark-text"></i>
-            <span>STEP 4: VERIFICATION DOCUMENTS</span>
+            <span>VERIFICATION DOCUMENTS</span>
           </div>
 
           <div class="dropzone-box" onclick="document.getElementById('ob-docs').click()">
@@ -807,13 +781,15 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
             </button>
             <div id="fb-docs" class="inline-feedback" style="margin-top:10px;"></div>
           </div>
+          </section>
         </div>
 
-        <!-- STEP 5: ADD COURTS -->
-        <div class="wizard-step" id="step-5">
-          <div class="step-title-header">
+        <!-- STEP 4: Courts & Rates -->
+        <div class="wizard-step" id="step-4">
+          <section class="onboarding-section">
+<div class="step-title-header">
             <i class="bi bi-layers-fill"></i>
-            <span>STEP 5: INITIAL COURTS SETUP</span>
+            <span>INITIAL COURTS SETUP</span>
           </div>
           
           <div class="info-callout">
@@ -836,13 +812,11 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
               <option value="covered">Covered Polyurethane</option>
             </select>
           </div>
-        </div>
-
-        <!-- STEP 6: CONFIGURE PRICING -->
-        <div class="wizard-step" id="step-6">
-          <div class="step-title-header">
+          </section>
+          <section class="onboarding-section">
+<div class="step-title-header">
             <i class="bi bi-tag-fill"></i>
-            <span>STEP 6: CONFIGURE COURT PRICING</span>
+            <span>CONFIGURE COURT PRICING</span>
           </div>
 
           <div class="form-group-modern">
@@ -850,13 +824,11 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
             <input type="number" id="ob-price" class="input-modern" placeholder="450.00" step="10">
             <div id="fb-price" class="inline-feedback"></div>
           </div>
-        </div>
-
-        <!-- STEP 7: OPERATING HOURS & AVAILABILITY -->
-        <div class="wizard-step" id="step-7">
-          <div class="step-title-header">
+          </section>
+          <section class="onboarding-section">
+<div class="step-title-header">
             <i class="bi bi-clock-fill"></i>
-            <span>STEP 7: OPERATING HOURS</span>
+            <span>OPERATING HOURS</span>
           </div>
 
           <div class="form-row-2">
@@ -869,13 +841,15 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
               <input type="time" id="ob-closetime" value="22:00" class="input-modern">
             </div>
           </div>
+          </section>
         </div>
 
-        <!-- STEP 8: PLATFORM SUBSCRIPTION -->
-        <div class="wizard-step" id="step-8">
-          <div class="step-title-header">
+        <!-- STEP 5: Plan & Payment -->
+        <div class="wizard-step" id="step-5">
+          <section class="onboarding-section">
+<div class="step-title-header">
             <i class="bi bi-award-fill"></i>
-            <span>STEP 8: CHOOSE SAAS SUBSCRIPTION</span>
+            <span>CHOOSE SAAS SUBSCRIPTION</span>
           </div>
           <p style="font-size:0.9rem; color:#1e293b; margin-bottom:18px; font-weight:700;">
             Select the platform package that fits your facility operations. Click a plan to review the full payment breakdown.
@@ -886,6 +860,8 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
               <?php
                 $isDefault = ($index === 0);
                 $slug = $plan['slug'] ?? strtolower(explode(' ', $plan['name'])[0]);
+                $hasFreeTrial = $plan['trial_eligible'];
+                $trialMonths = max(1, (int)($plan['trial_duration_months'] ?? 1));
               ?>
               <label id="plan-card-<?= htmlspecialchars($slug) ?>" class="sub-plan-card <?= $isDefault ? 'selected' : '' ?>" onclick="selectSubPlan('<?= htmlspecialchars($slug) ?>')">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -893,6 +869,9 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
                   <input type="radio" name="sub_plan" value="<?= htmlspecialchars($slug) ?>" <?= $isDefault ? 'checked' : '' ?> style="transform:scale(1.3); accent-color:#ff5733;">
                 </div>
                 <strong style="display:block; margin-top:10px; font-family:'Outfit', sans-serif; font-size:1.4rem; font-weight:900; color:#0c1a15;"><?= htmlspecialchars($plan['name']) ?></strong>
+                <?php if ($hasFreeTrial): ?>
+                  <p class="plan-trial-note"><i class="bi bi-gift-fill"></i> <?= $trialMonths ?>-month free trial · No payment required today</p>
+                <?php endif; ?>
                 <div style="font-family:'Outfit', sans-serif; font-size:1.6rem; font-weight:900; color:#15803d; margin:4px 0 6px;">₱<?= number_format($plan['monthly_price'], 2) ?> <span style="font-family:'Plus Jakarta Sans', sans-serif; font-size:0.8rem; font-weight:700; color:#475569;">/ month</span></div>
                 <p style="font-size:0.82rem; color:#334155; margin:0 0 12px; font-weight:600; line-height:1.4;"><?= htmlspecialchars($plan['description'] ?? '') ?></p>
                 
@@ -924,26 +903,24 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
                 </div>
 
                 <button type="button" onclick="event.stopPropagation(); selectSubPlan('<?= htmlspecialchars($slug) ?>'); openPaymentModal('<?= htmlspecialchars($slug) ?>');" class="btn-nav-next" style="width:100%; margin-top:16px; padding:10px; font-size:0.85rem; justify-content:center;">
-                  <i class="bi bi-credit-card-fill"></i> Select Plan &amp; Review Payment
+                  <i class="bi <?= $hasFreeTrial ? 'bi-gift-fill' : 'bi-credit-card-fill' ?>"></i> <?= $hasFreeTrial ? 'Select Plan &amp; Start Free Trial' : 'Select Plan &amp; Review Payment' ?>
                 </button>
               </label>
             <?php endforeach; ?>
           </div>
-        </div>
-
-        <!-- STEP 9: SUBSCRIPTION PAYMENT RECEIPT -->
-        <div class="wizard-step" id="step-9">
-          <div class="step-title-header">
+          </section>
+          <section class="onboarding-section">
+<div class="step-title-header">
             <i class="bi bi-receipt"></i>
-            <span>STEP 9: SUBSCRIPTION PAYMENT RECEIPT</span>
+            <span>SUBSCRIPTION PAYMENT RECEIPT</span>
           </div>
           
           <div id="s9-payment-pending-box" style="display:block; padding:32px 20px; text-align:center; background:#fffaf0; border:2px dashed #0c1a15; border-radius:16px; margin-bottom:16px;">
             <i class="bi bi-exclamation-circle-fill" style="font-size:2.8rem; color:#ff5733;"></i>
             <h4 style="font-family:'Outfit', sans-serif; font-size:1.3rem; font-weight:900; margin:12px 0 6px; text-transform:uppercase; color:#0c1a15;">PAYMENT NOT YET COMPLETED</h4>
-            <p style="font-size:0.88rem; color:#1e293b; font-weight:600; margin-bottom:18px; line-height:1.45;">Please select your desired subscription plan in Step 8 and confirm the payment breakdown to proceed.</p>
-            <button type="button" onclick="jumpToStep(8); openPaymentModalCurrent();" class="btn-nav-next" style="display:inline-flex; margin:0 auto;">
-              <i class="bi bi-credit-card"></i> Complete Payment in Step 8 &rarr;
+            <p style="font-size:0.88rem; color:#1e293b; font-weight:600; margin-bottom:18px; line-height:1.45;">Please select your desired subscription plan in Step 5 and confirm the payment breakdown to proceed.</p>
+            <button type="button" onclick="jumpToStep(5); openPaymentModalCurrent();" class="btn-nav-next" style="display:inline-flex; margin:0 auto;">
+              <i class="bi bi-credit-card"></i> Complete Payment in Step 5 &rarr;
             </button>
           </div>
 
@@ -975,7 +952,7 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
               </div>
               <div style="margin-top:16px; border-top:2px dashed #0c1a15; padding-top:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                 <span style="font-size:0.82rem; color:#334155; font-weight:700;">Need to adjust or change plan?</span>
-                <button type="button" onclick="jumpToStep(8); openPaymentModalCurrent();" class="btn-reset-draft">
+                <button type="button" onclick="jumpToStep(5); openPaymentModalCurrent();" class="btn-reset-draft">
                   <i class="bi bi-arrow-repeat"></i> Change Plan / Re-verify Payment
                 </button>
               </div>
@@ -989,11 +966,13 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
               <?php endforeach; ?>
             </select>
           </div>
+          </section>
         </div>
 
-        <!-- STEP 10: VERIFICATION SUBMISSION -->
-        <div class="wizard-step" id="step-10">
-          <div style="text-align:center; padding:16px 0;">
+        <!-- STEP 6: Review -->
+        <div class="wizard-step" id="step-6">
+          <section class="onboarding-section">
+<div style="text-align:center; padding:16px 0;">
             <div style="width:64px; height:64px; border-radius:50%; background:#d4f82c; color:#0c1a15; display:grid; place-items:center; font-size:2rem; margin:0 auto 16px; border:2.5px solid #000; box-shadow:3px 3px 0 #000;">
               <i class="bi bi-patch-check-fill"></i>
             </div>
@@ -1019,6 +998,7 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
               </div>
             </div>
           </div>
+          </section>
         </div>
 
         <!-- WIZARD NAVIGATION CONTROLS -->
@@ -1094,7 +1074,7 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
         </div>
 
         <!-- Payment Method Selection -->
-        <div style="margin-bottom:24px;">
+        <div id="modal-payment-channels" style="margin-bottom:24px;">
           <label style="font-family:'DM Mono', monospace; display:block; margin-bottom:10px; font-size:0.8rem; font-weight:900; color:#0c1a15;">SELECT PAYMENT CHANNEL *</label>
           <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px;">
             <?php foreach ($enabledPaymentMethods as $idx => $pm): ?>
@@ -1126,25 +1106,16 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
   <script src="<?= $basePath ?>/assets/js/components/navbar.js?v=2"></script>
   <script>
     let currentStep = 1;
-    const totalSteps = 10;
+    const totalSteps = 6;
     const DRAFT_KEY = 'pikvero_owner_onboarding_draft';
     const subscriptionPlansData = <?= json_encode($subscriptionPlans) ?>;
     const enabledPaymentMethodsData = <?= json_encode($enabledPaymentMethods) ?>;
     let activePaymentData = null;
     const APP_BASE = '<?= $basePath ?>';
 
-    const stepTitles = [
-      "1. Owner Account Setup",
-      "2. Business Information",
-      "3. Facility Details",
-      "4. Verification Documents",
-      "5. Initial Courts Setup",
-      "6. Configure Court Pricing",
-      "7. Operating Hours",
-      "8. Platform Subscription",
-      "9. Subscription Payment Receipt",
-      "10. Submit for Verification"
-    ];
+    const stepTitles = ["Account","Business & Facility","Documents","Courts & Rates","Plan & Payment","Review"];
+    const stepGroups = [[1],[2,3],[4],[5,6,7],[8,9],[10]];
+    const legacyStepMap = {1:1, 2:2, 3:2, 4:3, 5:4, 6:4, 7:4, 8:5, 9:5, 10:6};
 
     document.addEventListener('DOMContentLoaded', async () => {
       await NavbarComponent.render();
@@ -1204,7 +1175,7 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
         
         let plan = subscriptionPlansData.find(p => p.slug === planSlug) || subscriptionPlansData[0];
         const basePrice = parseFloat(plan ? plan.monthly_price : 999);
-        const isFreeTrial = (basePrice <= 0) || parseInt(plan ? plan.is_free_trial || 0 : 0) === 1 || methodId === 'free_trial';
+        const isFreeTrial = (basePrice <= 0) || methodId === 'free_trial';
         const platformFee = isFreeTrial ? 0 : Math.round((basePrice * 0.02) * 100) / 100;
         const gatewayFee  = isFreeTrial ? 0 : Math.round((basePrice * 0.025) * 100) / 100;
         const totalAmount = isFreeTrial ? 0 : (parseFloat(urlParams.get('amount')) || (basePrice + platformFee + gatewayFee));
@@ -1226,7 +1197,7 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
           paidDate: todayStr
         };
 
-        // Populate Step 9 Receipt
+        // Populate payment receipt
         if (document.getElementById('s9-plan-name')) document.getElementById('s9-plan-name').innerText = activePaymentData.planName;
         if (document.getElementById('s9-pay-method')) document.getElementById('s9-pay-method').innerText = activePaymentData.payMethodLabel;
         if (document.getElementById('s9-base-price')) document.getElementById('s9-base-price').innerText = `₱${basePrice.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
@@ -1238,7 +1209,7 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
         if (document.getElementById('s9-payment-success-box')) document.getElementById('s9-payment-success-box').style.display = 'block';
 
         saveToLocalStorage();
-        jumpToStepDirect(9);
+        jumpToStepDirect(5);
 
         const isFreeTrialActivation = (activePaymentData.totalAmount === 0) || (activePaymentData.payMethod === 'free_trial');
         Toast.success(
@@ -1249,7 +1220,7 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
         );
       } else if (urlParams.get('payment') === 'cancelled') {
         Toast.warning('Payment Cancelled', 'PayMongo checkout session was cancelled.');
-        jumpToStepDirect(8);
+        jumpToStepDirect(5);
       }
 
       // Attach auto-save listener to form
@@ -1269,7 +1240,7 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
           if (_cp && !_cp.value && _d.cpass) _cp.value = _d.cpass;
         } catch (_) {}
 
-        // Security check: verify all steps 1-10 before submission
+        // Security check: verify all six steps before submission
         for (let s = 1; s <= totalSteps; s++) {
           if (!await validateStep(s)) {
             jumpToStep(s);
@@ -1633,6 +1604,13 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
     }
 
     async function validateStep(step) {
+      for (const section of stepGroups[step - 1] || []) {
+        if (!await validateSection(section)) return false;
+      }
+      return true;
+    }
+
+    async function validateSection(step) {
       if (step === 1) {
         const fnameOk = validateFirstName();
         const lnameOk = validateLastName();
@@ -1674,7 +1652,7 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
       if (!plan) return;
 
       const basePrice = parseFloat(plan.monthly_price || 0);
-      const isFreeTrial = (basePrice <= 0) || parseInt(plan.is_free_trial || 0) === 1;
+      const isFreeTrial = (basePrice <= 0) || plan.trial_eligible === true;
       const platformFee = isFreeTrial ? 0 : Math.round((basePrice * 0.02) * 100) / 100;
       const gatewayFee  = isFreeTrial ? 0 : Math.round((basePrice * 0.025) * 100) / 100;
       const totalAmount  = isFreeTrial ? 0 : (basePrice + platformFee + gatewayFee);
@@ -1692,9 +1670,10 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
       const totalLabel     = document.getElementById('modal-total-label');
       const btnPayIcon     = document.getElementById('btn-pay-icon');
       const btnPayLabel    = document.getElementById('btn-pay-label');
-      const payMethodSection = document.querySelector('#payment-summary-modal [style*="margin-bottom:24px"]');
+      const payMethodSection = document.getElementById('modal-payment-channels');
 
       if (isFreeTrial) {
+        if (freeNote) freeNote.innerHTML = '<i class="bi bi-gift-fill"></i> ' + (parseInt(plan.is_free_trial || 0) === 1 ? `${Math.max(1, parseInt(plan.trial_duration_months || 1))}-month free trial` : 'Free plan') + ' — No payment required today.';
         if (feeRowPlatform) feeRowPlatform.style.display = 'none';
         if (feeRowGateway)  feeRowGateway.style.display  = 'none';
         if (freeNote)       freeNote.style.display        = 'flex';
@@ -1728,12 +1707,14 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
 
     async function processSubscriptionPayment() {
       const selectedSlug = document.querySelector('input[name="sub_plan"]:checked')?.value || 'starter';
+      const selectedPlan = subscriptionPlansData.find(p => p.slug === selectedSlug);
+      const isFreeTrial = selectedPlan && (selectedPlan.trial_eligible === true || parseFloat(selectedPlan.monthly_price || 0) <= 0);
       const selectedPayOption = document.querySelector('input[name="modal_paymethod"]:checked')?.value || enabledPaymentMethodsData[0]?.id || 'gcash';
 
       const btn = document.getElementById('btn-modal-pay-now');
       const origHtml = btn.innerHTML;
       btn.disabled = true;
-      btn.innerHTML = `<i class="bi bi-hourglass-split"></i> Redirecting to PayMongo...`;
+      btn.innerHTML = `<i class="bi bi-hourglass-split"></i> ${isFreeTrial ? 'Activating free trial...' : 'Redirecting to PayMongo...'}`;
 
       try {
         const res = await Api.post(`${APP_BASE}/api/payments/paymongo-checkout.php`, {
@@ -1743,7 +1724,7 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
         });
 
         if (res.success && res.data && res.data.checkout_url) {
-          Toast.info('PayMongo Checkout', 'Redirecting to official PayMongo payment portal...');
+          Toast.info(isFreeTrial ? 'Free Trial' : 'PayMongo Checkout', isFreeTrial ? 'Completing your free trial activation...' : 'Redirecting to official PayMongo payment portal...');
           saveToLocalStorage();
           closePaymentModal();
           setTimeout(() => {
@@ -1769,6 +1750,7 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
 
       const data = {
         currentStep: currentStep,
+        wizardVersion: 2,
         username: document.getElementById('ob-username')?.value || '',
         fname: document.getElementById('ob-fname')?.value || '',
         lname: document.getElementById('ob-lname')?.value || '',
@@ -1854,8 +1836,9 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
           selectSubPlan(data.subplan);
         }
 
-        if (data.currentStep && data.currentStep >= 1 && data.currentStep <= totalSteps) {
-          jumpToStepDirect(data.currentStep);
+        const restoredStep = data.wizardVersion === 2 ? Number(data.currentStep) : legacyStepMap[data.currentStep];
+        if (restoredStep >= 1 && restoredStep <= totalSteps) {
+          jumpToStepDirect(restoredStep);
         }
 
         Toast.info('Restored Draft', 'Form progress restored from your local storage.');
@@ -1892,6 +1875,8 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
       document.querySelectorAll('.wizard-step').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.step-pill').forEach((el, index) => {
         const stepNum = index + 1;
+        if (stepNum === targetStep) el.setAttribute('aria-current', 'step');
+        else el.removeAttribute('aria-current');
         el.classList.remove('active');
         if (stepNum < targetStep) el.classList.add('completed');
         else el.classList.remove('completed');
@@ -1910,7 +1895,7 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
       const percent = Math.round((currentStep / totalSteps) * 100);
       document.getElementById('progress-fill').style.width = `${percent}%`;
       document.getElementById('progress-percent-text').innerText = `${percent}% COMPLETE`;
-      document.getElementById('progress-step-text').innerText = `STEP ${currentStep} OF 10: ${stepTitles[currentStep - 1].toUpperCase()}`;
+      document.getElementById('progress-step-text').innerText = `STEP ${currentStep} OF ${totalSteps}: ${stepTitles[currentStep - 1].toUpperCase()}`;
 
       // Update Navigation Buttons
       document.getElementById('prev-btn').style.display = currentStep > 1 ? 'inline-flex' : 'none';

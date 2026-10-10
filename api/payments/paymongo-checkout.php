@@ -5,6 +5,8 @@ use App\Core\Database\Connection;
 use App\Core\Http\Response;
 use App\Core\Security\Sanitizer;
 use App\Infrastructure\Repositories\SystemSettingRepository;
+use App\Infrastructure\Repositories\SubscriptionPlanRepository;
+use App\Core\Auth\Auth;
 
 header('Content-Type: application/json');
 
@@ -66,6 +68,12 @@ $monthlyPrice = (float)($plan['monthly_price'] ?? 0);
 $yearlyPrice  = ((float)($plan['yearly_price'] ?? 0) > 0) ? (float)$plan['yearly_price'] : round($monthlyPrice * 12 * 0.70, 2);
 
 $basePrice = ($billingCycle === 'yearly') ? $yearlyPrice : $monthlyPrice;
+// Trial eligibility comes from the selected database plan, never the client.
+$hasUsedFreeTrial = (new SubscriptionPlanRepository())->hasUsedFreeTrial(0, (int)(Auth::id() ?? 0));
+$isFreeTrial = (int)($plan['is_free_trial'] ?? 0) === 1 && !$hasUsedFreeTrial;
+if ($isFreeTrial) {
+    $basePrice = 0;
+}
 $platformFee = round($basePrice * 0.02, 2);
 $gatewayFee = round($basePrice * 0.025, 2);
 $totalAmount = $basePrice + $platformFee + $gatewayFee;
@@ -130,7 +138,7 @@ $checkoutPayload = [
 // PayMongo requires a minimum of ₱1.00. Skip the API call entirely for free plans.
 if ($totalAmount <= 0) {
     $referenceId = 'free_' . bin2hex(random_bytes(10));
-    $checkoutUrl = "{$redirectUrl}?payment=success&ref={$referenceId}&plan={$plan['slug']}&method=free_trial&amount=0";
+    $checkoutUrl = "{$redirectUrl}?payment=success&ref={$referenceId}&plan_id={$plan['id']}&plan={$plan['slug']}&cycle={$billingCycle}&method=free_trial&amount=0";
     Response::success('Free trial subscription activated.', [
         'checkout_url' => $checkoutUrl,
         'reference'    => $referenceId,

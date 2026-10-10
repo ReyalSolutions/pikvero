@@ -1,0 +1,45 @@
+.onboarding-page .stepper-container { grid-template-columns: repeat(6, minmax(0, 1fr)); overflow: visible; gap: 8px; }
+.onboarding-page .plan-trial-note { font-size: .82rem; color: #166534; background: #f0fdf4; padding: 8px 10px; border-radius: 8px; margin-top: 8px; }
+.onboarding-page .step-pill { min-height: 54px; border: 1px solid #dce4df; box-shadow: none; font: inherit; }
+.onboarding-page .step-pill:is(.active, .completed, :hover) { box-shadow: none; transform: none; }
+.onboarding-page .step-pill-name { font-family: inherit; white-space: normal; text-transform: none; font-size: .72rem; line-height: 1.25; overflow: visible; }
+.onboarding-page .onboarding-title { text-transform: none; }
+.onboarding-page .onboarding-section + .onboarding-section { border-top: 1px solid #e2e8f0; padding-top: 20px; margin-top: 20px; }
+.onboarding-page .step-title-header { font-size: 1.05rem; }
+.onboarding-page .step-pill:focus-visible { outline: 3px solid #0d9488; outline-offset: 3px; }
+@media (max-width: 768px) {
+  .onboarding-page::before { background: rgba(248,250,248,.95); }
+  .onboarding-page .onboarding-page-wrap { padding: 84px 16px 32px; }
+  .onboarding-page :is(.onboarding-header-card, .onboarding-card) { padding: 18px 16px; border: 1px solid #dce4df; border-radius: 16px; box-shadow: 0 3px 12px rgba(12,26,21,.05); }
+  .onboarding-page .onboarding-header-card { margin-bottom: 16px; }
+  .onboarding-page .onboarding-top-bar { gap: 10px; margin-bottom: 14px; }
+  .onboarding-page .onboarding-title { font-size: clamp(1.7rem, 7vw, 2.1rem); }
+  .onboarding-page .onboarding-subtitle { font-weight: 500; font-size: .86rem; }
+  .onboarding-page .eyebrow-badge { font-size: .65rem; }
+  .onboarding-page .btn-reset-draft { min-height: 44px; box-shadow: none; border: 1px solid #cbd5e1; font-family: inherit; text-transform: none; }
+  .onboarding-page .progress-meta { gap: 6px; flex-wrap: wrap; font-size: .7rem; }
+  .onboarding-page .progress-track { border: 0; height: 6px; margin-bottom: 14px; }
+  .onboarding-page .stepper-container { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .onboarding-page .step-pill { padding: 8px 4px; }
+  .onboarding-page .form-row-2 { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .onboarding-page .form-row-2 > * { min-width: 0; }
+  .onboarding-page .form-label-modern { font-family: inherit; font-size: .78rem; }
+  .onboarding-page .input-modern { font-size: 16px; min-width: 0; min-height: 46px; }
+  .onboarding-page .step-title-header { gap: 8px; font-size: .92rem; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; }
+  .onboarding-page .step-title-header i { flex-shrink: 0; }
+  .onboarding-page .sub-plans-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .onboarding-page .sub-plan-card { padding: 16px; border: 1px solid #cbd5e1; box-shadow: none; }
+  .onboarding-page .sub-plan-card.selected { border: 2px solid #ff5733 !important; box-shadow: none !important; transform: none; }
+  .onboarding-page .info-callout { padding: 12px; border: 1px solid #cbd5e1; box-shadow: none; font-size: .85rem; }
+  .onboarding-page .wizard-nav-bar { padding-top: 16px; margin-top: 18px; border-top: 1px solid #e2e8f0; gap: 10px; }
+  .onboarding-page :is(.btn-nav-prev, .btn-nav-next, .btn-nav-submit) { min-height: 46px; padding: 10px 14px; font-family: inherit; font-size: .83rem; text-transform: none; border: 1px solid #cbd5e1; box-shadow: none; justify-content: center; }
+  .onboarding-page :is(.btn-nav-prev, .btn-nav-next, .btn-nav-submit):hover { box-shadow: none; transform: none; }
+  .onboarding-page .btn-nav-submit { width: 100%; }
+  .onboarding-page :is(input, button, a):focus-visible { outline: 3px solid #0d9488; outline-offset: 3px; }
+  .onboarding-page #payment-summary-modal > div { padding: 0; }
+  .onboarding-page #payment-summary-modal > div > div { padding: 20px 16px !important; border: 1px solid #cbd5e1 !important; box-shadow: none !important; }
+  .onboarding-page #payment-summary-modal h3 { font-size: 1.1rem !important; padding-right: 22px; }
+  .onboarding-page #payment-summary-modal [style*="minmax"] { grid-template-columns: minmax(0, 1fr) !important; }
+  .onboarding-page #s9-payment-success-box [style*="minmax"] { grid-template-columns: minmax(0, 1fr) !important; }
+  .onboarding-page #s9-payment-pending-box { padding: 18px 12px !important; }
+}

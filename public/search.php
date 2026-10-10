@@ -4,6 +4,7 @@
  * Premium high-impact Streetside UI with bg-search.png hero design
  */
 require_once __DIR__ . '/../app/bootstrap.php';
+$playerSearch = !empty($playerSearch) || \App\Core\Auth\Auth::check();
 
 // Calculate dynamic base URL and base path
 $reqUri   = $_SERVER['REQUEST_URI'] ?? '/';
@@ -944,11 +945,22 @@ if (empty($availableCities)) {
       }
     }
   </style>
+  <link rel="stylesheet" href="<?= $basePath ?>/assets/css/search-mobile.css?v=<?= filemtime(__DIR__ . '/../assets/css/search-mobile.css') ?>">
+  <?php if (!empty($playerSearch)): ?>
+  <link rel="stylesheet" href="<?= $basePath ?>/assets/css/streetside-theme.css?v=<?= filemtime(__DIR__ . '/../assets/css/streetside-theme.css') ?>">
+  <link rel="stylesheet" href="<?= $basePath ?>/assets/css/player-pages.css?v=1">
+  <?php endif; ?>
+<link rel="manifest" href="/pikvero/manifest.webmanifest">
+<meta name="theme-color" content="#003d2d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pikvero">
+<link rel="apple-touch-icon" href="/pikvero/assets/images/pwa/icon-180.png">
+<script defer src="/pikvero/assets/js/components/pwa.js?v=20261010"></script>
 </head>
-<body>
+<body class="search-page <?= !empty($playerSearch) ? 'customer-portal player-court-search' : '' ?>">
 
   <!-- GLOBAL REUSABLE HEADER -->
-  <?php require_once __DIR__ . '/../includes/header.php'; ?>
+  <?php if (empty($playerSearch)) require_once __DIR__ . '/../includes/header.php'; ?>
 
   <!-- HERO SECTION WITH BG-SEARCH.PNG -->
   <section class="search-hero-section">
@@ -956,18 +968,18 @@ if (empty($availableCities)) {
 
       <!-- Eyebrow Tag -->
       <div class="search-eyebrow">
-        <i class="bi bi-geo-alt-fill"></i> BOHOL PICKLEBALL &bull; LIVE COURT MARKETPLACE
+        <i class="bi bi-geo-alt-fill"></i> BOHOL &amp; PHILIPPINES
       </div>
 
       <!-- Headline -->
       <h1 class="search-hero-title">
-        <span class="title-ink">FIND &amp; FILTER</span>
-        <span class="title-coral">COURTS</span>
+        <span class="title-ink">Find your</span>
+        <span class="title-coral">court</span>
       </h1>
 
       <!-- Description -->
       <p class="search-hero-desc">
-        Compare verified facilities, check surfaces and amenities, and secure your court slot with instant anti-conflict lock.
+        Compare local courts and book a time that works for you.
       </p>
 
       <!-- Quick Filter Chips -->
@@ -995,13 +1007,13 @@ if (empty($availableCities)) {
           <div class="search-widget-pill">
             <div class="search-input-box">
               <i class="bi bi-search search-icon"></i>
-              <input type="text" id="filter-search" placeholder="Search court, facility, or keyword..." autocomplete="off">
+              <input type="text" id="filter-search" aria-label="Search courts or facilities" placeholder="Search courts or facilities" autocomplete="off">
               <button type="button" id="clear-search-btn" class="clear-input-btn" aria-label="Clear Search" onclick="clearSearchInput()">&times;</button>
             </div>
 
             <div class="widget-divider"></div>
 
-            <button type="button" id="toggle-filter-btn" class="btn-filters-toggle" aria-expanded="false" onclick="toggleFilterDrawer()">
+            <button type="button" id="toggle-filter-btn" class="btn-filters-toggle" aria-expanded="false" aria-controls="filter-drawer" onclick="toggleFilterDrawer()">
               <i class="bi bi-sliders"></i>
               <span>Filters</span>
               <span id="active-filter-badge" class="filter-count-badge" style="display:none;">0</span>
@@ -1135,7 +1147,12 @@ if (empty($availableCities)) {
   </main>
 
   <!-- GLOBAL DESKTOP FOOTER -->
+  <?php if (empty($playerSearch)): ?>
   <?php require_once __DIR__ . '/../includes/footer.php'; ?>
+  <?php else: ?>
+  <script src="<?= $basePath ?>/assets/js/components/bottom-nav.js?v=<?= filemtime(__DIR__ . '/../assets/js/components/bottom-nav.js') ?>"></script>
+  <script>BottomNavComponent.render('explore');</script>
+  <?php endif; ?>
 
   <!-- jQuery CDN -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -1396,6 +1413,10 @@ if (empty($availableCities)) {
       const count = courts ? courts.length : 0;
       
       $('#results-count-text').text(`${count} ${count === 1 ? 'COURT' : 'COURTS'} AVAILABLE`);
+      if (document.body.classList.contains('player-court-search') && matchMedia('(max-width:768px)').matches && window.renderExploreCourts) {
+        window.renderExploreCourts(courts || []);
+        return;
+      }
 
       if (!courts || courts.length === 0) {
         $grid.html(`
@@ -1658,5 +1679,11 @@ if (empty($availableCities)) {
       loadCourts();
     });
   </script>
+  <?php if (!empty($playerSearch)): ?>
+  <link rel="stylesheet" href="/pikvero/assets/css/explore-mobile.css?v=<?= filemtime(__DIR__.'/../assets/css/explore-mobile.css') ?>">
+  <link rel="stylesheet" href="/pikvero/assets/js/vendor/leaflet.css">
+  <script src="/pikvero/assets/js/vendor/leaflet.js"></script>
+  <script src="/pikvero/assets/js/components/explore-mobile.js?v=<?= filemtime(__DIR__.'/../assets/js/components/explore-mobile.js') ?>"></script>
+  <?php endif; ?>
 </body>
 </html>

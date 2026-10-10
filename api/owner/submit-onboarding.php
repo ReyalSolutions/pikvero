@@ -4,6 +4,9 @@ require_once __DIR__ . '/../../app/bootstrap.php';
 use App\Core\Database\Connection;
 use App\Core\Http\Response;
 use App\Core\Security\Sanitizer;
+use App\Core\Auth\Auth;
+use App\Infrastructure\Repositories\UserRepository;
+use App\Infrastructure\Repositories\SubscriptionPlanRepository;
 
 header('Content-Type: application/json');
 
@@ -46,6 +49,11 @@ if (empty($fname) || empty($lname) || empty($email) || empty($orgname) || empty(
 }
 
 $db = Connection::getInstance();
+$ownerRole = $db->selectOne("SELECT id FROM roles WHERE name = 'court_owner' LIMIT 1");
+if (!$ownerRole) {
+    Response::error('Court owner role is not configured.');
+}
+$ownerRoleId = (int)$ownerRole['id'];
 
 // Check if user already exists
 $existingUser = $db->selectOne("SELECT * FROM users WHERE email = ? OR username = ? LIMIT 1", [$email, $username]);
@@ -56,21 +64,20 @@ $db->beginTransaction();
 try {
     if ($existingUser) {
         $userId = (int)$existingUser['id'];
-        $sql = "UPDATE users SET first_name = ?, last_name = ?, phone = ?, role_id = 3, status = 'active', updated_at = NOW() WHERE id = ?";
-        $db->execute($sql, [$fname, $lname, $phone, $userId], 'sssi');
+        $sql = "UPDATE users SET first_name = ?, last_name = ?, phone = ?, role_id = ?, status = 'active', updated_at = NOW() WHERE id = ?";
+        $db->execute($sql, [$fname, $lname, $phone, $ownerRoleId, $userId], 'sssii');
     } else {
         $passwordHash = !empty($pass) ? password_hash($pass, PASSWORD_BCRYPT) : password_hash('PikveroOwner2026!', PASSWORD_BCRYPT);
         if (empty($username)) {
             $username = strtolower($fname . $lname . rand(100, 999));
         }
         $sql = "INSERT INTO users (username, first_name, last_name, email, password_hash, phone, role_id, status, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, 3, 'active', NOW(), NOW())";
-        $db->execute($sql, [$username, $fname, $lname, $email, $passwordHash, $phone], 'ssssss');
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'active', NOW(), NOW())";
+        $db->execute($sql, [$username, $fname, $lname, $email, $passwordHash, $phone, $ownerRoleId], 'ssssssi');
         $userId = $db->getLastInsertId();
 
-        // Assign user role (Court Owner = 3)
-        $db->execute("INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (?, 3)", [$userId]);
     }
+    $db->execute("INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (?, ?)", [$userId, $ownerRoleId], 'ii');
 
     // 2. Create Organization
     $sqlOrg = "INSERT INTO organizations (name, tax_id, phone, email, owner_id, status, created_at)
@@ -116,31 +123,43 @@ try {
     // 6. Create Subscription
     $plan = $db->selectOne("SELECT * FROM subscription_plans WHERE slug = ? OR name LIKE ? LIMIT 1", [$subplan, "%{$subplan}%"]);
     $planId = $plan ? (int)$plan['id'] : 1;
+    $trialEligible = (int)($plan['is_free_trial'] ?? 0) === 1 && !(new SubscriptionPlanRepository())->hasUsedFreeTrial(0, $userId);
+    $subscriptionMonths = $trialEligible
+        ? max(1, (int)($plan['trial_duration_months'] ?? 1))
+        : 1;
 
     $sqlSub = "INSERT INTO subscriptions (organization_id, plan_id, status, current_period_end, billing_cycle)
-               VALUES (?, ?, 'active', DATE_ADD(NOW(), INTERVAL 1 MONTH), 'monthly')";
-    $db->execute($sqlSub, [$organizationId, $planId]);
+               VALUES (?, ?, 'active', DATE_ADD(NOW(), INTERVAL ? MONTH), 'monthly')";
+    $db->execute($sqlSub, [$organizationId, $planId, $subscriptionMonths]);
     $subscriptionId = $db->getLastInsertId();
 
     // 7. Create Subscription Payment Record
     $amountPaid = isset($paymentData['totalAmount']) ? (float)$paymentData['totalAmount'] : ($plan ? (float)$plan['monthly_price'] : 999.00);
     $payMethodStr = isset($paymentData['payMethod']) ? $paymentData['payMethod'] : $paymethod;
 
+    if (!$trialEligible && $plan && (float)$plan['monthly_price'] > 0 && $amountPaid < (float)$plan['monthly_price']) {
+        throw new \RuntimeException('Your free trial has already been used. Complete payment at the regular plan price.');
+    }
+    if ($trialEligible) {
+        $amountPaid = 0;
+        $payMethodStr = 'Free Trial Promo';
+    }
+
     $sqlPay = "INSERT INTO subscription_payments (subscription_id, amount, payment_method, payment_status, created_at)
                VALUES (?, ?, ?, 'completed', NOW())";
     $db->execute($sqlPay, [$subscriptionId, $amountPaid, $payMethodStr]);
 
+    $ownerUser = (new UserRepository())->findById($userId);
+    if (!$ownerUser) {
+        throw new \RuntimeException('Unable to load the new owner account.');
+    }
+    $ownerUser['role_id'] = $ownerRoleId;
+    $ownerUser['role_name'] = 'court_owner';
+    $ownerUser['organization_id'] = $organizationId;
     $db->commit();
 
     // Set PHP Session for auto-login
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
-    $_SESSION['user_id'] = $userId;
-    $_SESSION['user_role_id'] = 3;
-    $_SESSION['user_name'] = "{$fname} {$lname}";
-    $_SESSION['user_email'] = $email;
-    $_SESSION['organization_id'] = $organizationId;
+    Auth::login($ownerUser);
 
     Response::success('Owner onboarding completed & registered in database successfully!', [
         'user_id'         => $userId,
@@ -148,7 +167,7 @@ try {
         'facility_id'     => $facilityId,
         'court_id'        => $courtId,
         'subscription_id' => $subscriptionId,
-        'redirect'        => '/pikvero/public/admin/dashboard.php'
+        'redirect'        => (strpos($_SERVER['REQUEST_URI'] ?? '', '/pikvero') === 0 ? '/pikvero' : '') . '/public/admin/dashboard.php'
     ]);
 
 } catch (\Exception $e) {

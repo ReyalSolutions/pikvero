@@ -73,14 +73,14 @@ const SidebarComponent = {
           type: 'single',
           key: 'explore',
           label: 'Explore Courts',
-          link: '/pikvero/public/search.php',
+          link: '/pikvero/public/customer/search.php',
           icon: 'bi-search'
         },
         {
           type: 'single',
           key: 'open_play',
           label: 'Open Play Socials',
-          link: '/pikvero/public/open-play.php',
+          link: '/pikvero/public/customer/open-play.php',
           icon: 'bi-dribbble'
         },
         {
@@ -124,8 +124,8 @@ const SidebarComponent = {
           icon: 'bi-ticket-detailed-fill',
           items: [
             { key: 'bookings', label: 'My Bookings', link: '/pikvero/public/customer/bookings.php', icon: 'bi-journal-check' },
-            { key: 'open_play', label: 'Open Play Socials', link: '/pikvero/public/open-play.php', icon: 'bi-dribbble' },
-            { key: 'explore', label: 'Book a Court', link: '/pikvero/public/search.php', icon: 'bi-search' }
+            { key: 'open_play', label: 'Open Play Socials', link: '/pikvero/public/customer/open-play.php', icon: 'bi-dribbble' },
+            { key: 'explore', label: 'Book a Court', link: '/pikvero/public/customer/search.php', icon: 'bi-search' }
           ]
         },
         {
@@ -317,6 +317,10 @@ const SidebarComponent = {
           icon: 'bi-bug-fill'
         });
       }
+      if (['super_admin','platform_admin','developer','court_owner','owner'].includes(role) || hasAnyPerm('system.manage')) {
+        adminItems.push({key:'announcements',label:'Announcements',link:'/pikvero/public/admin/announcements.php',icon:'bi-megaphone'});
+      }
+      adminItems.push({key:'notifications',label:'Notifications',link:'/pikvero/public/notifications.php',icon:'bi-bell'});
       if (adminItems.length > 0) {
         menuStructure.push({
           type: 'dropdown',

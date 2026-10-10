@@ -1,78 +1,45 @@
-/**
- * Global Subscription Checker Component for Pikvero Owners
- * Automatically evaluates owner subscription status, renders top alert banners, and pops payment modals.
- */
+/** Shared owner plan gate. Runs on every admin page after identity is resolved. */
 const SubscriptionChecker = {
   lastData: null,
-
+  checking: false,
+  owner: false,
   async init() {
-    // Only run for authenticated owner users
-    const user = (typeof AuthHelper !== 'undefined' && AuthHelper.currentUser) ? AuthHelper.currentUser : null;
-    if (!user) return;
-
-    const role = (user.role || (user.user ? user.user.role_name : '')).toLowerCase();
-    const isOwner = (role === 'owner' || role === 'organization_owner' || role === 'tenant_admin' || role === 'facility_manager');
-    
-    // Also check if current page path is under owner portal
-    const path = window.location.pathname.toLowerCase();
-    const isOwnerPage = path.includes('/owner/') || path.includes('/admin/facilities') || path.includes('/admin/courts') || path.includes('/admin/bookings');
-
-    if (!isOwner && !isOwnerPage) return;
-
+    const path = location.pathname.toLowerCase();
+    if (!path.includes('/admin/') && !path.includes('/owner/')) return;
     try {
-      const res = await Api.get('/pikvero/api/owner/subscription/status.php');
-      if (res && res.success && res.data) {
-        this.lastData = res.data;
-        this.evaluate(res.data);
-      }
-    } catch(err) {
-      console.warn('Subscription check error:', err);
-    }
+      const response = await fetch('/pikvero/api/auth/me.php', {credentials:'same-origin', headers:{Accept:'application/json'}});
+      if (!response.ok) return;
+      const result = await response.json();
+      const role = (result.data?.role || result.data?.user?.role_name || '').toLowerCase();
+      this.owner = ['court_owner', 'owner', 'organization_owner', 'tenant_admin'].includes(role);
+      if (!this.owner) return;
+      await this.refresh();
+      window.addEventListener('focus', () => this.refresh());
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) this.refresh(); });
+      setInterval(() => { if (!document.hidden) this.refresh(); }, 60000);
+    } catch (error) { console.warn('Unable to resolve subscription identity', error); }
   },
-
+  async refresh() {
+    if (!this.owner || this.checking) return;
+    this.checking = true;
+    try {
+      const response = await fetch('/pikvero/api/owner/subscription/status.php', {credentials:'same-origin', cache:'no-store', headers:{Accept:'application/json'}});
+      const result = await response.json();
+      if (!response.ok || !result.success || !result.data) throw new Error('Subscription status unavailable');
+      this.evaluate(result.data);
+    } catch (error) {
+      this.evaluate({requires_action:true, check_failed:true, has_subscription:true, plans:[], action_reason:'We could not verify your plan. Retry the check before continuing.'});
+    } finally { this.checking = false; }
+  },
   evaluate(data) {
-    if (!data) return;
-
-    const currentPath = window.location.pathname.toLowerCase();
-    const isMyPlanPage = currentPath.includes('my-plan.php');
-
-    // Render persistent banner if subscription requires action
+    this.lastData = data;
+    const recoveryPage = location.pathname.replace(/\.php$/, '').endsWith('/owner/my-plan');
     if (data.requires_action) {
-      this.renderBanner(data);
-
-      // If user is on an owner management page (not my-plan page), pop alert modal automatically
-      if (!isMyPlanPage) {
-        setTimeout(() => {
-          if (typeof SubscriptionAlertModal !== 'undefined') {
-            SubscriptionAlertModal.show(data);
-          }
-        }, 800);
-      }
+      SubscriptionAlertModal.show({...data, persistent:!recoveryPage});
+    } else {
+      SubscriptionAlertModal.currentStatusData = data;
+      SubscriptionAlertModal.close();
     }
-  },
-
-  renderBanner(data) {
-    if (document.getElementById('global-sub-banner')) return;
-
-    const bannerHtml = `
-      <div id="global-sub-banner" style="background:#fef3c7; border-bottom:2px solid var(--ink); padding:10px 24px; font-size:0.84rem; font-weight:800; color:#92400e; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; position:relative; z-index:9999;">
-        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-          <span class="badge-streetside coral" style="font-size:0.68rem;">SUBSCRIPTION EXPIRED / REQUIRED</span>
-          <span>${data.action_reason || 'Action required: Please renew your subscription to maintain full facility features.'}</span>
-        </div>
-        <button onclick="SubscriptionAlertModal.show(SubscriptionChecker.lastData)" class="button coral" style="padding:6px 14px; font-size:0.78rem; font-weight:900;">
-          <i class="bi bi-credit-card-fill"></i> SUBSCRIBE / RENEW NOW
-        </button>
-      </div>
-    `;
-
-    const mainEl = document.querySelector('main.portal-main') || document.body;
-    mainEl.insertAdjacentHTML('afterbegin', bannerHtml);
   }
 };
-
-document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    SubscriptionChecker.init();
-  }, 400);
-});
+document.addEventListener('DOMContentLoaded', () => SubscriptionChecker.init());

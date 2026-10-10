@@ -511,7 +511,7 @@ if (empty($enabledPaymentMethods)) {
 
       container.innerHTML = allPlansList.map(p => {
         const isCurrent = (parseInt(p.id) === activePlanId);
-        const isFree = parseInt(p.is_free_trial) === 1;
+        const isFree = parseInt(p.is_free_trial) === 1 && !currentSubscriptionData?.has_used_free_trial;
         const trialMonths = p.trial_duration_months || 1;
         const features = p.features || [];
 
@@ -709,7 +709,9 @@ if (empty($enabledPaymentMethods)) {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('payment') === 'success') {
         const ref = urlParams.get('ref') || '';
-        const planId = urlParams.get('plan_id') || urlParams.get('plan');
+        const planKey = urlParams.get('plan_id') || urlParams.get('plan');
+        const returnedPlan = allPlansList.find(p => String(p.id) === String(planKey) || p.slug === planKey);
+        const planId = returnedPlan ? Number(returnedPlan.id) : (/^\d+$/.test(planKey || '') ? Number(planKey) : 0);
         const cycle  = urlParams.get('cycle') || 'monthly';
         const method = urlParams.get('method') || 'PayMongo';
         const amount = urlParams.get('amount') || '0.00';
@@ -720,17 +722,21 @@ if (empty($enabledPaymentMethods)) {
           if (matchedPlan) planName = matchedPlan.name;
         }
 
-        if (planId) {
-          try {
-            await Api.post('/pikvero/api/owner/subscription/change.php', {
-              plan_id: planId,
-              billing_cycle: cycle,
-              payment_ref: ref,
-              payment_method: method
-            });
-          } catch (e) {
-            console.error(e);
-          }
+        if (!planId) {
+          Toast.error('Subscription activation incomplete', 'The selected plan could not be found. Please select your plan again.');
+          return;
+        }
+        try {
+          const activation = await Api.post('/pikvero/api/owner/subscription/change.php', {
+            plan_id: planId,
+            billing_cycle: cycle,
+            payment_ref: ref,
+            payment_method: method
+          });
+          if (!activation?.success) return;
+        } catch (e) {
+          console.error(e);
+          return;
         }
 
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -793,7 +799,7 @@ if (empty($enabledPaymentMethods)) {
           const payments = res.data.payments || [];
 
           if (sub) {
-            const isFree = parseInt(sub.is_free_trial) === 1;
+            const isFree = payments.length > 0 && parseFloat(payments[0].amount) === 0 && /free[ _]trial/i.test(payments[0].payment_method || '');
             const facPct = Math.min(100, Math.round((usage.facilities / (sub.max_facilities || 1)) * 100));
             const courtPct = Math.min(100, Math.round((usage.courts / (sub.max_courts || 1)) * 100));
             const staffPct = Math.min(100, Math.round((usage.staff / (sub.max_staff || 1)) * 100));
@@ -903,7 +909,7 @@ if (empty($enabledPaymentMethods)) {
                     ${isYearlySub ? 'Annual Auto-Renewal' : 'Monthly Auto-Renewal'} &bull; Period Ends <strong style="color:var(--green);">${sub.current_period_end || 'N/A'}</strong>
                   </div>
                   <div style="font-size:0.78rem; color:#5a7060; margin-top:2px;">
-                    Upcoming Charge: <strong>₱${(isFree ? 0 : (isYearlySub ? yPrice : mPrice)).toLocaleString('en-US', {minimumFractionDigits:2})}</strong> on ${sub.current_period_end || 'N/A'}
+                    Upcoming Charge: <strong>₱${(isYearlySub ? yPrice : mPrice).toLocaleString('en-US', {minimumFractionDigits:2})}</strong> on ${sub.current_period_end || 'N/A'}
                   </div>
                 </div>
 
@@ -1150,7 +1156,7 @@ if (empty($enabledPaymentMethods)) {
 
       container.innerHTML = allPlansList.map(p => {
         const isCurrent = (parseInt(p.id) === activePlanId);
-        const isFree = parseInt(p.is_free_trial) === 1;
+        const isFree = parseInt(p.is_free_trial) === 1 && !currentSubscriptionData?.has_used_free_trial;
         const trialMonths = p.trial_duration_months || 1;
         const features = p.features || [];
 
@@ -1257,7 +1263,7 @@ if (empty($enabledPaymentMethods)) {
       document.getElementById('sub-modal-plan-name').textContent = plan.name;
       document.getElementById('sub-modal-cycle-badge').textContent = (currentBillingCycle === 'yearly') ? 'ANNUAL BILLING (SAVE 30%)' : 'MONTHLY RECURRING';
 
-      const isFree = parseInt(plan.is_free_trial) === 1;
+      const isFree = parseInt(plan.is_free_trial) === 1 && !currentSubscriptionData?.has_used_free_trial;
       const monthlyPrice = parseFloat(plan.monthly_price) || 0;
       const yearlyPrice  = (parseFloat(plan.yearly_price) > 0) ? parseFloat(plan.yearly_price) : Math.round(monthlyPrice * 12 * 0.70 * 100) / 100;
       const basePrice    = isFree ? 0 : ((currentBillingCycle === 'yearly') ? yearlyPrice : monthlyPrice);

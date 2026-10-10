@@ -693,8 +693,7 @@ require_once __DIR__ . '/../../includes/head.php';
         panel.style.display = 'block';
         badge.className = 'badge-streetside green';
         badge.textContent = 'FREE TRIAL ENABLED';
-        priceInput.value = '0';
-        priceInput.disabled = true;
+        priceInput.disabled = false;
       } else {
         panel.style.display = 'none';
         badge.className = 'badge-streetside sand';
@@ -796,7 +795,7 @@ require_once __DIR__ . '/../../includes/head.php';
       const trial_duration_months = document.getElementById('pm_trial_duration').value;
       const trial_start_date = document.getElementById('pm_trial_start').value;
       const trial_end_date = document.getElementById('pm_trial_end').value;
-      const monthly_price = is_free_trial ? 0 : document.getElementById('pm_price').value;
+      const monthly_price = document.getElementById('pm_price').value;
       const max_facilities = document.getElementById('pm_facilities').value;
       const max_courts = document.getElementById('pm_courts').value;
       const max_staff = document.getElementById('pm_staff').value;

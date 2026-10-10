@@ -63,3 +63,4 @@ $needsJquery = array_intersect(['jquery', 'select2', 'datatables'], $headExtras)
 
   <!-- ── Page Loader (must be first script for early animation) ── -->
   <script src="/pikvero/assets/js/core/loader.js?v=<?= $v ?>"></script>
+  <?php require_once __DIR__ . '/subscription-gate.php'; ?>

@@ -8,10 +8,14 @@ DirectoryIndex index.php index.html
     RewriteRule ^ - [L]
 
     # 1. External Redirect: Remove .php from URL on GET requests
-    # Exclude POST requests so form submissions, logins, and API actions NEVER lose POST data
+    # Exclude POST requests and API requests so API endpoints are never redirected
     RewriteCond %{REQUEST_METHOD} !POST
+    RewriteCond %{REQUEST_URI} !/api/ [NC]
     RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s([^.]+)\.php [NC]
     RewriteRule ^ %1 [R=301,L]
+
+    # Route bookings before Apache handles the sibling helper directory.
+    RewriteRule ^admin/bookings/?$ admin/bookings.php [L,QSA]
 
     # 2. Internal Rewrite: Map clean URL to .php file if file.php exists
     RewriteCond %{REQUEST_FILENAME} !-d

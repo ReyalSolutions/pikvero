@@ -88,11 +88,20 @@ class BookingRepository {
         string $orderDir = 'DESC',
         string $statusFilter = 'all',
         string $startDate = '',
-        string $endDate = ''
+        string $endDate = '',
+        string $view = ''
     ): array {
         $whereClauses = ["b.customer_id = ?"];
         $params = [$customerId];
         $types = "i";
+        if (in_array($view, ['upcoming', 'past'], true)) {
+            $now = (new \DateTimeImmutable('now', new \DateTimeZone('Asia/Manila')))->format('Y-m-d H:i:s');
+            $whereClauses[] = $view === 'upcoming'
+                ? "CONCAT(b.booking_date, ' ', b.end_time) >= ? AND b.booking_status NOT IN ('cancelled', 'expired', 'refunded', 'completed')"
+                : "(CONCAT(b.booking_date, ' ', b.end_time) < ? OR b.booking_status IN ('cancelled', 'expired', 'refunded', 'completed'))";
+            $params[] = $now;
+            $types .= 's';
+        }
 
         if (!empty($search)) {
             $whereClauses[] = "(b.booking_reference LIKE ? OR c.name LIKE ? OR f.name LIKE ? OR f.city LIKE ?)";
@@ -144,12 +153,13 @@ class BookingRepository {
         $start = max(0, $start);
         $length = max(1, min(100, $length));
 
-        $sql = "SELECT b.*, c.name AS court_name, c.court_type, f.name AS facility_name, f.city, f.address
+        $sql = "SELECT b.*, c.name AS court_name, c.court_type, f.name AS facility_name, f.city, f.address,
+                       (SELECT fi.image_path FROM facility_images fi WHERE fi.facility_id = f.id ORDER BY fi.is_primary DESC, fi.id LIMIT 1) AS facility_image
                 FROM bookings b
                 JOIN courts c ON b.court_id = c.id
                 JOIN facilities f ON b.facility_id = f.id
                 WHERE {$whereSql}
-                ORDER BY {$colName} {$dir}
+                ORDER BY {$colName} {$dir}, b.id {$dir}
                 LIMIT {$start}, {$length}";
 
         $rows = $this->db->select($sql, $params, $types);

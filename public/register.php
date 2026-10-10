@@ -488,8 +488,9 @@ $favLogo = class_exists(Auth::class) ? Auth::getLogoUrl() : ($basePath . '/asset
       text-decoration: underline;
     }
   </style>
+  <link rel="stylesheet" href="<?= $basePath ?>/assets/css/register-mobile.css?v=<?= filemtime(__DIR__ . '/../assets/css/register-mobile.css') ?>">
 </head>
-<body>
+<body class="register-page">
 
   <!-- Dynamic Fixed Header -->
   <?php require_once __DIR__ . '/../includes/header.php'; ?>
@@ -502,16 +503,16 @@ $favLogo = class_exists(Auth::class) ? Auth::getLogoUrl() : ($basePath . '/asset
 
       <!-- Header -->
       <div class="register-header">
-        <h1 class="register-title">CREATE AN ACCOUNT</h1>
-        <p class="register-subtitle">Join Pikvero to book courts, join open play, or manage your facility</p>
+        <h1 class="register-title">Create your account</h1>
+        <p class="register-subtitle">Choose how you’ll use Pikvero.</p>
       </div>
 
       <!-- Role Switcher -->
       <div class="role-switcher">
-        <button type="button" class="role-btn active type-btn" id="btn-type-player" data-type="player">
+        <button type="button" class="role-btn active type-btn" id="btn-type-player" data-type="player" aria-pressed="true">
           <i class="bi bi-person-fill"></i> Player
         </button>
-        <button type="button" class="role-btn type-btn" id="btn-type-owner" data-type="owner">
+        <button type="button" class="role-btn type-btn" id="btn-type-owner" data-type="owner" aria-pressed="false">
           <i class="bi bi-building-fill"></i> Court Owner
         </button>
       </div>
@@ -528,17 +529,17 @@ $favLogo = class_exists(Auth::class) ? Auth::getLogoUrl() : ($basePath . '/asset
 
       <!-- Dedicated Court Owner Redirection Card -->
       <div id="owner-redirect-card" class="owner-callout-card">
-        <div style="width:52px; height:52px; border-radius:50%; background:#d4f82c; color:#0c1a15; display:grid; place-items:center; font-size:1.6rem; margin:0 auto 12px; border:2px solid #000; box-shadow:2px 2px 0 #000;">
+        <div class="owner-setup-icon">
           <i class="bi bi-patch-check-fill"></i>
         </div>
-        <h3 style="font-family:'Outfit', sans-serif; font-size:1.35rem; font-weight:900; text-transform:uppercase; margin-bottom:8px; color:#0c1a15;">
-          COURT OWNER ONBOARDING WIZARD
-        </h3>
-        <p style="font-size:0.88rem; color:#1e293b; font-weight:600; margin-bottom:18px; line-height:1.45;">
-          Court owners register through our dedicated 10-step onboarding wizard to configure their facility, courts, hourly pricing, and SaaS platform subscription.
+        <h2 class="owner-setup-title">
+          Bring your courts to Pikvero
+        </h2>
+        <p class="owner-setup-description">
+          We’ll guide you through creating your account, adding your courts, and choosing a plan.
         </p>
         <a href="<?= $basePath ?>/public/owner-onboarding" class="btn-submit" style="text-decoration:none;">
-          <i class="bi bi-arrow-right-circle-fill"></i> Start Owner Onboarding &rarr;
+          Set up your facility <i class="bi bi-arrow-right" aria-hidden="true"></i>
         </a>
       </div>
 
@@ -804,6 +805,8 @@ $favLogo = class_exists(Auth::class) ? Auth::getLogoUrl() : ($basePath . '/asset
       const regForm = document.getElementById('register-form');
       const btnPlayer = document.getElementById('btn-type-player');
       const btnOwner = document.getElementById('btn-type-owner');
+      btnPlayer.setAttribute('aria-pressed', String(type !== 'owner'));
+      btnOwner.setAttribute('aria-pressed', String(type === 'owner'));
 
       if (type === 'owner') {
         btnPlayer.classList.remove('active');

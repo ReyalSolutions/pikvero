@@ -513,6 +513,9 @@ require_once __DIR__ . '/../../includes/head.php';
               json.data.forEach(u => { currentUsersMap[u.id] = u; });
             }
             return json.data || [];
+          },
+          error: function(xhr, error, thrown) {
+            console.error('DataTables error:', xhr.status, thrown);
           }
         },
         columns: [

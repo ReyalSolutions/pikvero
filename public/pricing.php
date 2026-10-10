@@ -673,8 +673,9 @@ $user = $isLoggedIn ? Auth::user() : [];
       }
     }
   </style>
+  <link rel="stylesheet" href="<?= $basePath ?>/assets/css/public-mobile.css?v=<?= filemtime(__DIR__ . '/../assets/css/public-mobile.css') ?>">
 </head>
-<body>
+<body class="pricing-page">
 
   <!-- GLOBAL REUSABLE HEADER -->
   <?php require_once __DIR__ . '/../includes/header.php'; ?>
@@ -685,11 +686,11 @@ $user = $isLoggedIn ? Auth::user() : [];
     <!-- 1. HERO TITLE -->
     <section class="pricing-hero">
       <div class="pricing-eyebrow">
-        TRANSPARENT &bull; SAAS &bull; TIERS
+        FOR COURT OWNERS
       </div>
       <h1>
-        <span class="title-dark">OWNER</span>
-        <span class="title-coral">SUBSCRIPTION PLANS</span>
+        <span class="title-dark">Plans for</span>
+        <span class="title-coral">your facility</span>
       </h1>
       <p>Everything you need to run your pickleball facility — from solo courts to multi-venue operations.</p>
     </section>
@@ -699,7 +700,7 @@ $user = $isLoggedIn ? Auth::user() : [];
       <div class="billing-toggle-pill">
         <span class="billing-toggle-label" id="label-monthly" onclick="setBilling(false)">MONTHLY</span>
         <label class="toggle-switch">
-          <input type="checkbox" id="billing-toggle">
+          <input type="checkbox" id="billing-toggle" aria-label="Use yearly billing">
           <div class="toggle-track"><div class="toggle-thumb"></div></div>
         </label>
         <span class="billing-toggle-label inactive" id="label-yearly" onclick="setBilling(true)">

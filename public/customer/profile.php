@@ -6,7 +6,15 @@ if (!Auth::check()) {
     header('Location: /pikvero/public/login.php');
     exit;
 }
+if (empty($_SESSION['profile_csrf'])) $_SESSION['profile_csrf'] = bin2hex(random_bytes(24));
+$profileUpdated = !empty($_SESSION['player_profile_updated']);
+unset($_SESSION['player_profile_updated']);
 $favLogo = Auth::getLogoUrl();
+require_once __DIR__ . '/../../includes/player-profile-data.php';
+$profileExtra = playerProfileData((int)Auth::id());
+$profileUser = Auth::user() ?? [];
+$profileName = trim(($profileUser['first_name'] ?? '') . ' ' . ($profileUser['last_name'] ?? ''));
+$profileInitials = strtoupper(substr($profileUser['first_name'] ?? '', 0, 1) . substr($profileUser['last_name'] ?? '', 0, 1));
 ?>
 <!doctype html>
 <html lang="en">
@@ -18,8 +26,8 @@ $favLogo = Auth::getLogoUrl();
   <link rel="shortcut icon" type="image/png" href="<?= htmlspecialchars($favLogo) ?>?v=<?= time() ?>">
   <link rel="apple-touch-icon" href="<?= htmlspecialchars($favLogo) ?>?v=<?= time() ?>">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <link rel="stylesheet" href="/pikvero/assets/css/streetside-theme.css">
-  <link rel="stylesheet" href="/pikvero/assets/css/toast.css">
+  <link rel="stylesheet" href="/pikvero/assets/css/streetside-theme.css?v=<?= filemtime(__DIR__ . '/../../assets/css/streetside-theme.css') ?>">
+  <link rel="stylesheet" href="/pikvero/assets/css/toast.css?v=<?= filemtime(__DIR__ . '/../../assets/css/toast.css') ?>">
   <style>
     @media (max-width: 768px) {
       .portal-main {
@@ -85,13 +93,21 @@ $favLogo = Auth::getLogoUrl();
       }
     }
   </style>
+<link rel="stylesheet" href="/pikvero/assets/css/player-profile.css?v=<?= filemtime(__DIR__ . '/../../assets/css/player-profile.css') ?>">
+<link rel="manifest" href="/pikvero/manifest.webmanifest">
+<meta name="theme-color" content="#003d2d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pikvero">
+<link rel="apple-touch-icon" href="/pikvero/assets/images/pwa/icon-180.png">
+<script defer src="/pikvero/assets/js/components/pwa.js?v=20261010"></script>
 </head>
-<body>
+<body class="customer-portal player-profile">
 
   <aside id="sidebar-container"></aside>
   <header id="navbar-container"></header>
 
   <main class="portal-main">
+    <div class="profile-masthead"><a href="/pikvero/public/customer/dashboard.php" aria-label="Back to home"><i class="bi bi-chevron-left"></i></a><div><strong>Pikvero</strong><span>Find. Book. Rally.</span></div><a href="/pikvero/public/notifications.php" aria-label="Your notifications"><i class="bi bi-bell"></i></a></div>
     <div>
       <div class="prof-header-wrap" style="margin-bottom:20px;">
         <div class="eyebrow">PLAYER SETTINGS</div>
@@ -100,224 +116,57 @@ $favLogo = Auth::getLogoUrl();
 
       <!-- Profile Summary Header Card -->
       <div id="profile-summary-card" class="card-streetside sky" style="padding:24px; margin-bottom:24px;">
-        <!-- Loaded via JS -->
+        <div class="profile-avatar-wrap"><div class="profile-avatar" aria-hidden="true"><?php if (!empty($profileExtra['image_url'])): ?><img src="<?= htmlspecialchars($profileExtra['image_url']) ?>" alt=""><?php else: ?><?= htmlspecialchars($profileInitials) ?><?php endif; ?></div><a class="profile-camera" href="/pikvero/public/customer/edit-profile.php#profile-photo" aria-label="Update profile photo"><i class="bi bi-camera-fill"></i></a></div>
+        <h2 class="profile-name"><?= htmlspecialchars($profileName) ?></h2>
+        <p class="profile-email"><?= htmlspecialchars($profileUser['email'] ?? '') ?></p>
+        <span class="profile-member"><i class="bi bi-person-check-fill"></i> Player account</span>
       </div>
 
-      <div class="prof-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:24px;">
-        
-        <!-- Column 1: Personal Info & Preferences -->
-        <div class="prof-col-gap" style="display:flex; flex-direction:column; gap:20px;">
-          
-          <!-- Personal Information -->
-          <div class="card-streetside prof-card-compact" style="padding:24px; background:var(--white);">
-            <h3 style="font-size:1.15rem; font-weight:800; text-transform:uppercase; margin:0 0 14px;"><i class="bi bi-person-badge"></i> PERSONAL INFORMATION</h3>
-            
-            <form id="profile-info-form">
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
-                <div class="form-group-compact">
-                  <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">FIRST NAME</label>
-                  <input type="text" id="prof-fname" required style="width:100%; padding:9px; border:2px solid var(--ink); border-radius:10px; font-family:inherit; font-weight:700;">
-                </div>
-                <div class="form-group-compact">
-                  <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">LAST NAME</label>
-                  <input type="text" id="prof-lname" required style="width:100%; padding:9px; border:2px solid var(--ink); border-radius:10px; font-family:inherit; font-weight:700;">
-                </div>
-              </div>
-
-              <div class="form-group-compact" style="margin-bottom:10px;">
-                <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">EMAIL ADDRESS</label>
-                <input type="email" id="prof-email" disabled style="width:100%; padding:9px; border:2px solid var(--ink); border-radius:10px; font-family:inherit; background:var(--sand); cursor:not-allowed; opacity:0.8;">
-              </div>
-
-              <div class="form-group-compact" style="margin-bottom:16px;">
-                <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">PHONE NUMBER (11 DIGITS)</label>
-                <input type="text" id="prof-phone" maxlength="11" placeholder="09171234567" style="width:100%; padding:9px; border:2px solid var(--ink); border-radius:10px; font-family:inherit; font-weight:700;">
-              </div>
-
-              <button type="submit" class="button lime" style="padding:9px 16px; font-size:0.82rem;">Save Info</button>
-            </form>
-          </div>
-
-          <!-- Preferences -->
-          <div class="card-streetside prof-card-compact" style="padding:24px; background:var(--white);">
-            <h3 style="font-size:1.15rem; font-weight:800; text-transform:uppercase; margin:0 0 14px;"><i class="bi bi-sliders"></i> GAMEPLAY PREFERENCES</h3>
-
-            <form id="preferences-form">
-              <div class="form-group-compact" style="margin-bottom:10px;">
-                <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">PREFERRED COURT TYPE</label>
-                <select id="pref-court-type" style="width:100%; padding:9px; border:2px solid var(--ink); border-radius:10px; font-family:inherit; font-weight:700;">
-                  <option value="indoor">Indoor (Aircon / Weatherproof)</option>
-                  <option value="outdoor">Outdoor</option>
-                  <option value="covered">Covered Outdoor</option>
-                </select>
-              </div>
-
-              <div class="form-group-compact" style="margin-bottom:16px;">
-                <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">SKILL LEVEL</label>
-                <select id="pref-skill-level" style="width:100%; padding:9px; border:2px solid var(--ink); border-radius:10px; font-family:inherit; font-weight:700;">
-                  <option value="Beginner">Beginner (1.0 - 2.5)</option>
-                  <option value="Intermediate" selected>Intermediate (3.0 - 3.5)</option>
-                  <option value="Advanced">Advanced (4.0 - 4.5)</option>
-                  <option value="Pro">Tournament Pro (5.0+)</option>
-                </select>
-              </div>
-
-              <button type="submit" class="button lime" style="padding:9px 16px; font-size:0.82rem;">Save Preferences</button>
-            </form>
-          </div>
-
-        </div>
-
-        <!-- Column 2: Notification Settings & Security -->
-        <div class="prof-col-gap" style="display:flex; flex-direction:column; gap:20px;">
-          
-          <!-- Notification Settings -->
-          <div class="card-streetside prof-card-compact" style="padding:24px; background:var(--white);">
-            <h3 style="font-size:1.15rem; font-weight:800; text-transform:uppercase; margin:0 0 14px;"><i class="bi bi-bell"></i> NOTIFICATION SETTINGS</h3>
-
-            <div style="display:flex; flex-direction:column; gap:12px;">
-              <label style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
-                <span style="font-weight:700; font-size:0.88rem;">Email Reminders</span>
-                <input type="checkbox" id="notif-email" checked style="width:18px; height:18px; accent-color:var(--coral);">
-              </label>
-
-              <label style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; border-top:1px solid var(--line); padding-top:10px;">
-                <span style="font-weight:700; font-size:0.88rem;">Push Notifications</span>
-                <input type="checkbox" id="notif-push" checked style="width:18px; height:18px; accent-color:var(--coral);">
-              </label>
-            </div>
-
-            <button onclick="saveNotifications()" class="button lime" style="padding:9px 16px; font-size:0.82rem; margin-top:16px;">Save Notifications</button>
-          </div>
-
-          <!-- Security Credentials -->
-          <div class="card-streetside prof-card-compact" style="padding:24px; background:var(--white);">
-            <h3 style="font-size:1.15rem; font-weight:800; text-transform:uppercase; margin:0 0 14px;"><i class="bi bi-shield-lock"></i> SECURITY &amp; PASSWORD</h3>
-
-            <form id="security-form">
-              <div class="form-group-compact" style="margin-bottom:10px;">
-                <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">CURRENT PASSWORD</label>
-                <input type="password" id="sec-current-pass" required placeholder="••••••••" style="width:100%; padding:9px; border:2px solid var(--ink); border-radius:10px; font-family:inherit;">
-              </div>
-
-              <div class="form-group-compact" style="margin-bottom:10px;">
-                <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">NEW PASSWORD</label>
-                <input type="password" id="sec-new-pass" required placeholder="••••••••" style="width:100%; padding:9px; border:2px solid var(--ink); border-radius:10px; font-family:inherit;">
-              </div>
-
-              <div class="form-group-compact" style="margin-bottom:16px;">
-                <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">CONFIRM NEW PASSWORD</label>
-                <input type="password" id="sec-confirm-pass" required placeholder="••••••••" style="width:100%; padding:9px; border:2px solid var(--ink); border-radius:10px; font-family:inherit;">
-              </div>
-
-              <button type="submit" class="button coral" style="padding:9px 16px; font-size:0.82rem;">Update Password</button>
-            </form>
-          </div>
-
-        </div>
-
+      <div class="profile-shortcuts">
+        <a href="/pikvero/public/customer/bookings.php"><i class="bi bi-calendar-check"></i><span><strong>My bookings</strong><small>View and manage your reservations</small></span><i class="bi bi-chevron-right"></i></a>
+        <a href="/pikvero/public/customer/open-play.php"><i class="bi bi-ticket-perforated"></i><span><strong>Open play passes</strong><small>Your sessions and entry passes</small></span><i class="bi bi-chevron-right"></i></a>
+      </div>
+      <div class="profile-shortcuts">
+        <a href="/pikvero/public/customer/edit-profile.php"><i class="bi bi-person"></i><span><strong>Personal information</strong><small>Your contact and account details</small></span><i class="bi bi-chevron-right"></i></a>
+        <a href="#preferences-modal" data-profile-modal="preferences-modal"><i class="bi bi-dribbble"></i><span><strong>Play preferences</strong><small>Your playing level</small></span><i class="bi bi-chevron-right"></i></a>
+        <a href="#notifications-modal" data-profile-modal="notifications-modal"><i class="bi bi-bell"></i><span><strong>Notifications</strong><small>Booking updates and reminders</small></span><i class="bi bi-chevron-right"></i></a>
+        <a href="#password-modal" data-profile-modal="password-modal"><i class="bi bi-shield-lock"></i><span><strong>Update password</strong><small>Manage your password</small></span><i class="bi bi-chevron-right"></i></a>
       </div>
     </div>
 
+<h2 class="profile-support-title">Support</h2><div class="profile-shortcuts"><a href="#help-modal" data-profile-modal="help-modal"><i class="bi bi-question-circle"></i><span><strong>Help Center</strong></span><i class="bi bi-chevron-right"></i></a><a href="#contact-modal" data-profile-modal="contact-modal"><i class="bi bi-chat-heart"></i><span><strong>Contact Us</strong></span><i class="bi bi-chevron-right"></i></a><a href="#terms-modal" data-profile-modal="terms-modal"><i class="bi bi-file-text"></i><span><strong>Terms of Service</strong></span><i class="bi bi-chevron-right"></i></a><a href="#privacy-modal" data-profile-modal="privacy-modal"><i class="bi bi-shield-lock"></i><span><strong>Privacy Policy</strong></span><i class="bi bi-chevron-right"></i></a><a href="#bug-modal" data-profile-modal="bug-modal"><i class="bi bi-bug"></i><span><strong>Report a bug</strong></span><i class="bi bi-chevron-right"></i></a></div>
+    <button class="profile-signout" onclick="AuthHelper.logout()"><i class="bi bi-box-arrow-right"></i> Sign out</button>
     <footer id="footer-container"></footer>
   </main>
 
+<dialog id="password-modal" class="profile-dialog" aria-labelledby="password-modal-title"><div class="profile-dialog-heading"><h2 id="password-modal-title">Update password</h2><button type="button" data-close-dialog aria-label="Close Update password">&times;</button></div><form id="profile-password-form"><label for="password-current">Current password</label><input id="password-current" type="password" autocomplete="current-password" required><label for="password-new">New password</label><input id="password-new" type="password" autocomplete="new-password" minlength="8" required><small>Use at least 8 characters.</small><label for="password-confirm">Confirm new password</label><input id="password-confirm" type="password" autocomplete="new-password" minlength="8" required><button class="profile-save" type="submit">Update password</button></form></dialog><dialog id="help-modal" class="profile-dialog" aria-labelledby="help-modal-title"><div class="profile-dialog-heading"><h2 id="help-modal-title">Help Center</h2><button type="button" data-close-dialog aria-label="Close Help Center">&times;</button></div><div class="profile-support-content"><h3>Book a court</h3><p>Open Explore, choose a court, select an available time and complete checkout. Find your reservation in My bookings.</p><h3>Manage a reservation</h3><p>Open My bookings to view your voucher or receipt. If cancellation is available, use the cancel action on your reservation. Facility policies apply.</p><h3>Join open play</h3><p>Browse Open Play, choose a session with available places and confirm your registration. Your entry pass appears under My Passes.</p><h3>Need more help?</h3><p>Use Contact Us for account or booking questions, or Report a bug for technical problems. Include your booking reference when relevant. Never share your password or card details.</p></div></dialog><dialog id="terms-modal" class="profile-dialog" aria-labelledby="terms-modal-title"><div class="profile-dialog-heading"><h2 id="terms-modal-title">Terms of Service</h2><button type="button" data-close-dialog aria-label="Close Terms of Service">&times;</button></div><div class="profile-support-content"><h4 style="font-weight:800;">1. Acceptance of Terms</h4>
+      <p style="font-size:0.88rem; color:#3b4e48; line-height:1.5;">By accessing or using Pikvero, you agree to comply with and be bound by these Terms of Service. Pikvero provides an online reservation platform connecting players and court owners.</p>
+
+      <h4 style="font-weight:800; margin-top:20px;">2. Court Reservations &amp; Cancellation Policy</h4>
+      <p style="font-size:0.88rem; color:#3b4e48; line-height:1.5;">All reservations are subject to facility availability and atomic double-booking checks. Cancellations must adhere to individual facility operating policies.</p>
+</div></dialog><dialog id="privacy-modal" class="profile-dialog" aria-labelledby="privacy-modal-title"><div class="profile-dialog-heading"><h2 id="privacy-modal-title">Privacy Policy</h2><button type="button" data-close-dialog aria-label="Close Privacy Policy">&times;</button></div><div class="profile-support-content"><h4 style="font-weight:800;">1. Information We Collect</h4>
+      <p style="font-size:0.88rem; color:#3b4e48; line-height:1.5;">We collect name, email address, 11-digit phone number, and reservation history required to process court bookings and multi-tenant authentication.</p>
+
+      <h4 style="font-weight:800; margin-top:20px;">2. Security &amp; Tenant Isolation</h4>
+      <p style="font-size:0.88rem; color:#3b4e48; line-height:1.5;">Personal data and payment transaction records are secured using MySQLi prepared statements, password hashing, and server-side multi-tenant isolation rules.</p>
+</div></dialog><dialog id="contact-modal" class="profile-dialog" aria-labelledby="contact-modal-title"><div class="profile-dialog-heading"><h2 id="contact-modal-title">Contact Us</h2><button type="button" data-close-dialog aria-label="Close Contact Us">&times;</button></div><p class="profile-dialog-description">Tell us how we can help with your account or booking. Do not include passwords or payment card details.</p><form id="profile-contact-form"><label for="contact-subject">Subject</label><input id="contact-subject" minlength="4" maxlength="200" required><label for="contact-description">Message</label><textarea id="contact-description" minlength="10" maxlength="10000" rows="5" required></textarea><button class="profile-save" type="submit">Send message</button></form></dialog><dialog id="bug-modal" class="profile-dialog" aria-labelledby="bug-modal-title"><div class="profile-dialog-heading"><h2 id="bug-modal-title">Report a bug</h2><button type="button" data-close-dialog aria-label="Close Report a bug">&times;</button></div><p class="profile-dialog-description">Describe what happened, the steps to reproduce it, and what you expected. Do not include passwords or payment card details.</p><form id="profile-bug-form"><label for="bug-subject">Subject</label><input id="bug-subject" minlength="4" maxlength="200" required><label for="bug-description">Steps and details</label><textarea id="bug-description" minlength="10" maxlength="10000" rows="5" required></textarea><button class="profile-save" type="submit">Submit report</button></form></dialog>
+  <dialog id="preferences-modal" class="profile-dialog" aria-labelledby="preferences-title">
+    <div class="profile-dialog-heading"><h2 id="preferences-title">Play preferences</h2><button type="button" data-close-dialog aria-label="Close play preferences">&times;</button></div>
+    <form id="profile-preferences-form"><label for="modal-playing-level">Playing level</label><select id="modal-playing-level" required><?php foreach (['Beginner','Intermediate','Advanced','Pro'] as $level): ?><option value="<?= htmlspecialchars($level) ?>" <?= ($profileExtra['playing_level'] ?? '') === $level ? 'selected' : '' ?>><?= htmlspecialchars($level) ?></option><?php endforeach; ?></select><button class="profile-save" type="submit">Save preferences</button></form>
+  </dialog>
+  <dialog id="notifications-modal" class="profile-dialog" aria-labelledby="notifications-title">
+    <div class="profile-dialog-heading"><h2 id="notifications-title">Notifications</h2><button type="button" data-close-dialog aria-label="Close notifications">&times;</button></div>
+    <form id="profile-notifications-form"><label class="profile-toggle">Email reminders<input id="modal-email-notifications" type="checkbox"></label><label class="profile-toggle">Push notifications<input id="modal-push-notifications" type="checkbox"></label><button class="profile-save" type="submit" id="save-profile-notifications" disabled>Save notifications</button></form>
+  </dialog>
   <script src="/pikvero/assets/js/core/toast.js"></script>
   <script src="/pikvero/assets/js/core/ajax.js"></script>
   <script src="/pikvero/assets/js/core/auth.js"></script>
+  <script data-notification-badge src="/pikvero/assets/js/components/notification-badge.js?v=<?= filemtime(__DIR__.'/../../assets/js/components/notification-badge.js') ?>"></script>
   <script src="/pikvero/assets/js/components/navbar.js"></script>
-  <script src="/pikvero/assets/js/components/bottom-nav.js"></script>
+  <script src="/pikvero/assets/js/components/bottom-nav.js?v=<?= filemtime(__DIR__ . '/../../assets/js/components/bottom-nav.js') ?>"></script>
   <script src="/pikvero/assets/js/components/sidebar.js"></script>
   <script src="/pikvero/assets/js/components/footer.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', async () => {
-      await NavbarComponent.render('#navbar-container', true);
-      const userCtx = await AuthHelper.checkSession();
-      if (!userCtx || !userCtx.user) {
-        window.location.href = '/pikvero/public/login.php';
-        return;
-      }
-
-      SidebarComponent.render('profile', 'customer');
-      FooterComponent.render('#footer-container', true);
-
-      const user = userCtx.user;
-
-      document.getElementById('profile-summary-card').innerHTML = `
-        <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
-          <div class="brand-mark" style="width:52px; height:52px; font-size:1.5rem; background:var(--coral); color:var(--white);">
-            ${user.last_name.charAt(0).toUpperCase()}
-          </div>
-          <div>
-            <h2 style="font-size:1.4rem; font-weight:800; margin:0 0 2px;">${user.first_name} ${user.last_name}</h2>
-            <div style="font-size:0.85rem; color:#1a3d34;">${user.email} &bull; Registered Member</div>
-          </div>
-        </div>
-      `;
-
-      document.getElementById('prof-fname').value = user.first_name;
-      document.getElementById('prof-lname').value = user.last_name;
-      document.getElementById('prof-email').value = user.email;
-      document.getElementById('prof-phone').value = user.phone || '';
-
-      // Auto-filter non-digits on phone input
-      document.getElementById('prof-phone').addEventListener('input', function() {
-        this.value = this.value.replace(/\D/g, '');
-      });
-
-      // Load user notification preferences
-      try {
-        const notifRes = await Api.get('/pikvero/api/customer/notifications.php?action=get_preferences');
-        if (notifRes.success && notifRes.data) {
-          document.getElementById('notif-email').checked = notifRes.data.email_notifications == 1;
-          document.getElementById('notif-push').checked = notifRes.data.push_notifications == 1;
-        }
-      } catch (err) {}
-
-      document.getElementById('profile-info-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        Toast.success('Profile Saved', 'Personal information updated successfully.');
-      });
-
-      document.getElementById('preferences-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        Toast.success('Preferences Saved', 'Gameplay preferences updated.');
-      });
-
-      document.getElementById('security-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const np = document.getElementById('sec-new-pass').value;
-        const cp = document.getElementById('sec-confirm-pass').value;
-        if (np !== cp) {
-          Toast.error('Password Mismatch', 'New password and confirm password do not match.');
-          return;
-        }
-        Toast.success('Password Updated', 'Security credentials updated successfully.');
-      });
-    });
-
-    async function saveNotifications() {
-      const emailVal = document.getElementById('notif-email').checked;
-      const pushVal = document.getElementById('notif-push').checked;
-
-      try {
-        const res = await Api.post('/pikvero/api/customer/notifications.php?action=save_preferences', {
-          email_notifications: emailVal,
-          push_notifications: pushVal
-        });
-
-        if (res.success) {
-          Toast.success('Notification Settings', 'Saved notification preferences successfully.');
-          if (pushVal && 'Notification' in window && Notification.permission !== 'granted') {
-            Notification.requestPermission();
-          }
-        } else {
-          Toast.error('Error', res.message || 'Could not save notification preferences.');
-        }
-      } catch (e) {
-        Toast.error('Error', 'Failed to update notification settings.');
-      }
-    }
-  </script>
-</body>
-</html>
+  <script>document.addEventListener('DOMContentLoaded',()=>{SidebarComponent.render('profile','customer');
+    <?php if ($profileUpdated): ?>Toast.success('Profile updated', 'Your changes have been saved.', 4500);<?php endif; ?>});</script>
+<script>window.PROFILE_CSRF = <?= json_encode($_SESSION['profile_csrf']) ?>;</script><script src="/pikvero/assets/js/components/profile-settings.js?v=<?= filemtime(__DIR__ . '/../../assets/js/components/profile-settings.js') ?>"></script>
+</body></html>

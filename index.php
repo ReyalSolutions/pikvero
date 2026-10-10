@@ -424,7 +424,7 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
        ======================================================== */
     .hero-grid {
       display: grid;
-      grid-template-columns: 1.15fr 0.95fr;
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.95fr);
       align-items: center;
       gap: 48px;
       margin: auto 0;
@@ -520,6 +520,8 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
     }
 
     .search-widget-input {
+      min-width: 0;
+      width: 100%;
       border: none;
       outline: none;
       flex-grow: 1;
@@ -677,6 +679,25 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
 
     .slider-img.active {
       opacity: 1;
+    }
+
+    .court-image-badges {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      z-index: 2;
+    }
+
+    .court-image-badges > div {
+      position: static;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .badge-live-avail {
@@ -1103,6 +1124,10 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
     }
 
     .court-tag-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
       position: absolute;
       top: 12px;
       left: 12px;
@@ -1207,6 +1232,38 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
       box-shadow: 3px 3px 0 #000;
     }
 
+    .facility-card-footer {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 14px;
+      margin-top: 4px;
+      padding-top: 16px;
+    }
+
+    .facility-hours {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #475569;
+    }
+
+    .facility-hours i { color: var(--teal); flex-shrink: 0; }
+
+    .facility-card-footer .btn-court-book {
+      justify-content: center;
+      gap: 10px;
+      min-height: 46px;
+      width: 100%;
+      background: var(--lime);
+      color: var(--ink);
+      white-space: nowrap;
+    }
+
+    .facility-card-footer .btn-court-book:hover { background: var(--lime-hover); }
+
     /* ── Section B: Popular Locations ──────────────────────── */
     .locations-grid-wrap {
       display: grid;
@@ -1215,6 +1272,7 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
     }
 
     .loc-card-item {
+      gap: 12px;
       background: #ffffff;
       border: 2px solid #000;
       border-radius: 16px;
@@ -1235,6 +1293,7 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
     }
 
     .loc-info-left {
+      min-width: 0;
       display: flex;
       align-items: center;
       gap: 12px;
@@ -1255,6 +1314,7 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
     }
 
     .loc-title {
+      overflow-wrap: anywhere;
       font-family: 'Outfit', sans-serif;
       font-weight: 800;
       font-size: 1.08rem;
@@ -1263,12 +1323,15 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
     }
 
     .loc-province {
+      overflow-wrap: anywhere;
       font-size: 0.76rem;
       color: #64748b;
       font-weight: 600;
     }
 
     .loc-badge-count {
+      white-space: nowrap;
+      flex-shrink: 0;
       font-family: 'DM Mono', monospace;
       font-size: 0.70rem;
       font-weight: 700;
@@ -1503,6 +1566,9 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
 
     /* Responsive */
     @media (max-width: 1080px) {
+      .hero-bg-section::before {
+        background: linear-gradient(180deg, rgba(255,255,255,.97) 0%, rgba(255,255,255,.92) 60%, rgba(255,255,255,.8) 100%);
+      }
       .hero-grid {
         grid-template-columns: 1fr;
         gap: 40px;
@@ -1525,6 +1591,23 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
     }
 
     @media (max-width: 640px) {
+      .hero-title { font-size: clamp(2.4rem, 10.5vw, 4rem); line-height: 1.02; }
+      .ball-wrapper { display: none; }
+      .hero-left { gap: 18px; min-width: 0; }
+      .hero-description { font-size: 1rem; color: #263a32; }
+      .hero-grid { gap: 28px; }
+      .search-widget-form { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 12px; }
+      .search-widget-input { min-height: 44px; font-size: 1rem; }
+      .btn-search-pill { grid-column: 1 / -1; min-height: 44px; }
+      .quick-actions-row .quick-pill { width: 100%; justify-content: center; min-height: 44px; }
+      .trust-badges-row { gap: 10px 16px; margin-top: 0; }
+      .trust-item { font-size: .78rem; }
+      .courts-grid-wrap, .locations-grid-wrap, .how-it-works-grid, .testimonials-grid { grid-template-columns: minmax(0, 1fr); }
+      .section-header-row { flex-direction: column; align-items: flex-start; gap: 16px; }
+      .amenities-badges-grid { grid-template-columns: minmax(0, 1fr); }
+      .amenity-chip { white-space: normal; }
+      .owner-banner-title { font-size: clamp(1.8rem, 8vw, 2.8rem); }
+      .footer-container > *, .owner-banner-inner > * { min-width: 0; }
       .main-wrapper {
         padding: 84px 16px 30px;
       }
@@ -1587,8 +1670,9 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
       box-shadow: -8px 0 25px rgba(0,0,0,0.25);
     }
   </style>
+  <link rel="stylesheet" href="<?= $basePath ?>/assets/css/homepage.css?v=<?= filemtime(__DIR__ . '/assets/css/homepage.css') ?>">
 </head>
-<body>
+<body class="homepage">
 
   <?php if (!empty($dbError)): ?>
     <!-- HOSTING DATABASE STATUS NOTICE -->
@@ -1640,13 +1724,13 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
           </h1>
 
           <p class="hero-description">
-            Pikvero connects players with top local pickleball courts. Real-time availability, instant online reservations, and multi-tenant court management.
+            Find local pickleball courts, check availability, and book your next game.
           </p>
 
           <!-- Search Widget -->
           <form action="<?= $basePath ?>/public/search" method="GET" class="search-widget-form">
             <i class="bi bi-geo-alt-fill"></i>
-            <input type="text" name="city" class="search-widget-input" placeholder="Search city or location (e.g. <?= htmlspecialchars($cityName) ?>)" value="<?= htmlspecialchars($cityName) ?>">
+            <input type="text" name="city" class="search-widget-input" aria-label="City or location" placeholder="Search city or location" value="<?= htmlspecialchars($cityName) ?>">
             <button type="submit" class="btn-search-pill">
               <i class="bi bi-search"></i>
               <span>Search</span>
@@ -1657,14 +1741,6 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
           <div class="quick-actions-row">
             <a href="<?= $basePath ?>/public/search" class="quick-pill coral">
               <span><i class="bi bi-grid-fill" style="margin-right:4px;"></i> Explore All Courts</span>
-              <i class="bi bi-chevron-right"></i>
-            </a>
-            <a href="<?= $basePath ?>/public/pricing" class="quick-pill lime">
-              <span><i class="bi bi-tag-fill" style="margin-right:4px;"></i> Pricing</span>
-              <i class="bi bi-chevron-right"></i>
-            </a>
-            <a href="<?= $basePath ?>/public/register?type=owner" class="quick-pill dark">
-              <span><i class="bi bi-building" style="margin-right:4px;"></i> List Your Facility</span>
               <i class="bi bi-chevron-right"></i>
             </a>
           </div>
@@ -1692,6 +1768,7 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
           <div class="glass-court-card">
 
             <div class="court-image-wrap" id="heroCourtSlider">
+              <div class="court-image-badges">
               <div class="badge-live-avail">
                 <span class="live-dot"></span>
                 <span>LIVE AVAILABILITY</span>
@@ -1700,6 +1777,7 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
               <div class="badge-court-pro">
                 <span>COURT #<?= htmlspecialchars($courtNumber) ?></span>
                 <span class="badge-pro-tag"><?= htmlspecialchars($courtType) ?></span>
+              </div>
               </div>
 
               <?php foreach ($normalizedImages as $idx => $imgSrc): ?>
@@ -1765,24 +1843,6 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
     </div>
   </section>
 
-  <!-- MARQUEE TICKER STRIP -->
-  <div class="marquee-wrap">
-    <div class="marquee-track">
-      <span>&#9733; INSTANT COURT RESERVATIONS</span> &bull; 
-      <span>ZERO DOUBLE BOOKING CONFLICTS</span> &bull; 
-      <span>&#9733; MULTI-TENANT PICKLEBALL SAAS</span> &bull; 
-      <span>TOURNAMENT GRADE CUSHIONED SURFACES</span> &bull; 
-      <span>&#9733; NIGHT FLOODLIGHTING AVAILABLE</span> &bull; 
-      <span>DIGITAL MOBILE BOOKING SLIPS</span> &bull; 
-      <span>&#9733; INSTANT COURT RESERVATIONS</span> &bull; 
-      <span>ZERO DOUBLE BOOKING CONFLICTS</span> &bull; 
-      <span>&#9733; MULTI-TENANT PICKLEBALL SAAS</span> &bull; 
-      <span>TOURNAMENT GRADE CUSHIONED SURFACES</span> &bull; 
-      <span>&#9733; NIGHT FLOODLIGHTING AVAILABLE</span> &bull; 
-      <span>DIGITAL MOBILE BOOKING SLIPS</span>
-    </div>
-  </div>
-
   <!-- PLATFORM METRICS STRIP -->
   <section class="metrics-section">
     <div class="metrics-container">
@@ -1792,7 +1852,7 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
       </div>
       <div class="metric-card-item">
         <div class="metric-val">100%</div>
-        <div class="metric-txt">Anti-Conflict Schedule Lock</div>
+        <div class="metric-txt">Booking protection</div>
       </div>
       <div class="metric-card-item">
         <div class="metric-val"><?= htmlspecialchars($totalHours) ?>+</div>
@@ -1811,7 +1871,7 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
       <div class="section-header-row">
         <div>
           <div class="section-eyebrow">MOST RESERVED VENUES</div>
-          <h2 class="section-main-title">TOP RESERVED COURTS</h2>
+          <h2 class="section-main-title">Top reserved courts</h2>
         </div>
         <a href="<?= $basePath ?>/public/search" class="section-view-all">VIEW ALL COURTS &rarr;</a>
       </div>
@@ -1859,12 +1919,6 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
         <?php endforeach; ?>
       </div>
 
-      <div style="text-align:center;">
-        <a href="<?= $basePath ?>/public/search" class="btn-book-slot" style="background:var(--coral); color:#fff; box-shadow:3px 3px 0 #000;">
-          <i class="bi bi-grid-fill"></i>
-          <span>Explore All <?= $totalCourts ?> Courts</span>
-        </a>
-      </div>
     </div>
   </section>
 
@@ -1874,7 +1928,7 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
       <div class="section-header-row">
         <div>
           <div class="section-eyebrow">METRO &amp; PROVINCIAL HUBS</div>
-          <h2 class="section-main-title">POPULAR PLAY LOCATIONS</h2>
+          <h2 class="section-main-title">Popular play locations</h2>
         </div>
         <a href="<?= $basePath ?>/public/search" class="section-view-all">ALL REGIONS &rarr;</a>
       </div>
@@ -1903,16 +1957,16 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
     <div class="section-wrap">
       <div style="text-align:center; max-width:680px; margin:0 auto 40px;">
         <div class="section-eyebrow">SIMPLE 3-STEP RESERVATION</div>
-        <h2 class="section-main-title">HOW PIKVERO WORKS</h2>
+        <h2 class="section-main-title">How Pikvero works</h2>
         <p style="font-size:0.95rem; color:#475569; margin-top:8px;">
-          Book premium court hours in under a minute with real-time atomic schedule locks.
+          Find a court, choose your time, and confirm your booking.
         </p>
       </div>
 
       <div class="how-it-works-grid">
         <div class="step-box-card">
           <div class="step-num-badge" style="background:var(--lime); color:var(--ink);">1</div>
-          <h3 class="step-title">SEARCH &amp; FILTER</h3>
+          <h3 class="step-title">Find your court</h3>
           <p class="step-desc">
             Browse pickleball venues by city, tournament-grade cushioned acrylic surfaces, night lighting, and amenities.
           </p>
@@ -1920,7 +1974,7 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
 
         <div class="step-box-card">
           <div class="step-num-badge" style="background:#38bdf8; color:var(--ink);">2</div>
-          <h3 class="step-title">SELECT TIME SLOT</h3>
+          <h3 class="step-title">Choose a time</h3>
           <p class="step-desc">
             Pick your preferred date and time slot. Our real-time atomic locking prevents double-booking disputes 100%.
           </p>
@@ -1928,7 +1982,7 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
 
         <div class="step-box-card">
           <div class="step-num-badge" style="background:var(--coral); color:#ffffff;">3</div>
-          <h3 class="step-title">CONFIRM &amp; PLAY</h3>
+          <h3 class="step-title">Confirm &amp; play</h3>
           <p class="step-desc">
             Pay safely via GCash, Maya, or Card. Receive your instant digital booking slip, arrive at the facility, and play!
           </p>
@@ -1943,7 +1997,7 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
       <div class="section-header-row">
         <div>
           <div class="section-eyebrow">VERIFIED VENUES</div>
-          <h2 class="section-main-title">FEATURED PICKLEBALL CENTERS</h2>
+          <h2 class="section-main-title">Featured pickleball centers</h2>
         </div>
         <a href="<?= $basePath ?>/public/search" class="section-view-all">ALL VENUES &rarr;</a>
       </div>
@@ -1973,9 +2027,9 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
                 </p>
               </div>
 
-              <div class="court-card-bottom">
-                <span class="court-chip"><i class="bi bi-clock-fill"></i> Open 6AM - 10PM</span>
-                <a href="<?= $basePath ?>/public/facility?id=<?= $fac['id'] ?>" class="btn-court-book" style="background:var(--lime); color:var(--ink);">
+              <div class="court-card-bottom facility-card-footer">
+                <span class="facility-hours"><i class="bi bi-clock"></i> Open 6 AM – 10 PM</span>
+                <a href="<?= $basePath ?>/public/facility?id=<?= $fac['id'] ?>" class="btn-court-book">
                   <span>View Center</span>
                   <i class="bi bi-chevron-right"></i>
                 </a>
@@ -1992,7 +2046,7 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
     <div class="section-wrap">
       <div style="text-align:center; max-width:680px; margin:0 auto 36px;">
         <div class="section-eyebrow">COMMUNITY FEEDBACK</div>
-        <h2 class="section-main-title">WHAT PLAYERS &amp; OPERATORS SAY</h2>
+        <h2 class="section-main-title">What our community says</h2>
         <p style="font-size:0.95rem; color:#475569; margin-top:8px;">
           Trusted by pickleball enthusiasts and facility managers across Bohol and the Philippines.
         </p>
@@ -2055,13 +2109,13 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
     <div class="owner-banner-inner">
       <div>
         <div style="background:#000; color:#fff; display:inline-block; padding:4px 10px; border-radius:6px; font-family:'DM Mono', monospace; font-size:0.72rem; font-weight:700;">
-          OWNER SAAS PLATFORM
+          FOR COURT OWNERS
         </div>
         <h2 class="owner-banner-title">
-          LIST YOUR PICKLEBALL FACILITY ON PIKVERO
+          Bring more players to your courts
         </h2>
         <p class="owner-banner-desc">
-          Empower your sports complex with automated court scheduling, peak/off-peak rate rules, instant customer reservations, and revenue analytics.
+          Manage court schedules, accept online bookings, and track your revenue in one place.
         </p>
         <div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
           <a href="<?= $basePath ?>/public/register?type=owner" class="btn-book-slot" style="background:var(--lime); font-size:0.95rem; padding:14px 28px;">
@@ -2074,22 +2128,6 @@ if ($courtType === 'INDOOR' || $courtType === 'OUTDOOR') {
         </div>
       </div>
 
-      <div>
-        <div class="owner-card-box">
-          <div style="width:56px; height:56px; border-radius:14px; background:var(--lime); border:2px solid #000; box-shadow:2.5px 2.5px 0 #000; margin:0 auto 16px; display:flex; align-items:center; justify-content:center; font-size:1.8rem;">
-            <i class="bi bi-speedometer2"></i>
-          </div>
-          <h3 style="font-family:'Outfit', sans-serif; font-weight:800; font-size:1.35rem; text-transform:uppercase; margin-bottom:8px;">
-            START IN 5 MINUTES
-          </h3>
-          <p style="font-size:0.86rem; color:#475569; line-height:1.45; margin-bottom:20px;">
-            Set up operating hours, configure court types, and begin accepting reservations immediately.
-          </p>
-          <a href="<?= $basePath ?>/public/register?type=owner" class="btn-book-slot" style="background:var(--coral); color:#fff; width:100%; justify-content:center;">
-            Register Facility Now
-          </a>
-        </div>
-      </div>
     </div>
   </section>
 

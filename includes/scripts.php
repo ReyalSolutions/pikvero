@@ -43,5 +43,4 @@ $needsJquery = array_intersect(['jquery', 'select2', 'datatables'], $headExtras)
   <script src="/pikvero/assets/js/components/footer.js?v=<?= $v ?>"></script>
   <script src="/pikvero/assets/js/components/upgrade-plan-modal.js?v=<?= $v ?>"></script>
   <script src="/pikvero/assets/js/components/payment-success-modal.js?v=<?= $v ?>"></script>
-  <script src="/pikvero/assets/js/components/subscription-alert-modal.js?v=<?= $v ?>"></script>
-  <script src="/pikvero/assets/js/components/subscription-checker.js?v=<?= $v ?>"></script>
+  <?php require_once __DIR__ . '/subscription-gate.php'; ?>

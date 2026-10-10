@@ -20,7 +20,7 @@ class BookingService {
         $this->auditRepo = new AuditLogRepository();
     }
 
-    public function createBooking(int $customerId, int $courtId, string $date, string $startTime, string $endTime, ?string $notes = null, string $paymentMethod = 'cash'): array {
+    public function createBooking(int $customerId, int $courtId, string $date, string $startTime, string $endTime, ?string $notes = null, string $paymentMethod = 'cash', array $addons = []): array {
         $court = $this->courtRepo->findById($courtId);
         if (!$court) {
             throw new Exception("Court not found.");
@@ -49,6 +49,23 @@ class BookingService {
         $db->beginTransaction();
 
         try {
+            $bookingItems = [];
+            $seenProducts = [];
+            if (count($addons) > 20) throw new Exception('Too many add-ons selected.');
+            foreach ($addons as $addon) {
+                if (!is_array($addon)) throw new Exception('Invalid add-on.');
+                $productId = filter_var($addon['product_id'] ?? null, FILTER_VALIDATE_INT);
+                $quantity = filter_var($addon['quantity'] ?? null, FILTER_VALIDATE_INT);
+                if (!$productId || !$quantity || $quantity < 1 || $quantity > 20 || isset($seenProducts[$productId])) {
+                    throw new Exception('Invalid add-on quantity.');
+                }
+                $seenProducts[$productId] = true;
+                $product = $db->selectOne("SELECT * FROM products WHERE id = ? AND facility_id = ? AND type = 'rental' AND status = 'active' FOR UPDATE", [$productId, (int)$court['facility_id']], 'ii');
+                if (!$product) throw new Exception('A selected add-on is no longer available.');
+                $subtotal = round((float)$product['price'] * $quantity, 2);
+                $totalAmount += $subtotal;
+                $bookingItems[] = [$product['name'], $quantity, (float)$product['price'], $subtotal];
+            }
             $bookingId = $this->bookingRepo->create([
                 'booking_reference' => $refCode,
                 'customer_id' => $customerId,
@@ -66,6 +83,9 @@ class BookingService {
                 'notes' => $notes
             ]);
 
+            foreach ($bookingItems as $item) {
+                $db->execute('INSERT INTO booking_items (booking_id, item_name, quantity, unit_price, subtotal) VALUES (?, ?, ?, ?, ?)', [$bookingId, ...$item], 'isidd');
+            }
             $db->commit();
 
             $this->auditRepo->log($customerId, 'booking.create', 'Bookings', "Created booking #{$refCode} for " . ($court['name'] ?? "Court #{$courtId}") . " on {$date} ({$startTime} - {$endTime}) [Payment: {$paymentMethod}]");

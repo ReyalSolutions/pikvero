@@ -107,9 +107,14 @@ class CustomerController {
             'courts'    => $courts,
             'amenities' => $amenities,
             'products'  => $products,
+            'payment_methods' => array_values(array_filter(['qrph'], function ($method) use ($allSettings) {
+                $key = 'paymongo_enable_' . $method;
+                return !isset($allSettings[$key]) || $allSettings[$key] === '1';
+            })),
             'fees'      => [
-                'platform_fee_percent' => (float)($allSettings['platform_commission_pct'] ?? $allSettings['platform_fee_percent'] ?? 10.0),
-                'paymongo_fee_percent' => (float)($allSettings['paymongo_fee_percent'] ?? 2.5)
+                'platform_fee_percent' => (float)($allSettings['platform_commission_pct'] ?? $allSettings['platform_fee_percent'] ?? 0),
+                'paymongo_fee_percent' => (float)($allSettings['paymongo_fee_percent'] ?? 0),
+                'pass_gateway_fee' => ($allSettings['payment_gateway_fee_pass'] ?? '0') === '1'
             ]
         ]);
     }
@@ -133,6 +138,11 @@ class CustomerController {
         // Attach real amenities and images to each court
         foreach ($courts as &$court) {
             $court['amenities'] = $this->courtRepo->getCourtAmenities((int)$court['id']);
+            $facilityAmenities = $this->facilityRepo->getFacilityAmenities((int)$court['facility_id']);
+            $court['amenities'] = array_values(array_reduce(array_merge($court['amenities'], $facilityAmenities), function ($items, $amenity) {
+                $items[$amenity['name']] = $amenity;
+                return $items;
+            }, []));
             $court['images']    = $this->courtRepo->getCourtImages((int)$court['id']);
         }
         unset($court);
@@ -185,7 +195,8 @@ class CustomerController {
                 $data['start_time'],
                 $data['end_time'],
                 $data['notes'] ?? null,
-                $paymentMethod
+                $paymentMethod,
+                is_array($data['addons'] ?? null) ? $data['addons'] : []
             );
             Response::success('Reservation created successfully!', $booking);
         } catch (Exception $e) {
@@ -227,7 +238,8 @@ class CustomerController {
                 $orderDir,
                 $statusFilter,
                 $startDate,
-                $endDate
+                $endDate,
+                (string)($request->get('view') ?? '')
             );
 
             header('Content-Type: application/json');

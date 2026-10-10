@@ -1,0 +1,28 @@
+.mobile-bookings{display:none}
+@media(max-width:768px){
+ body.customer-portal.player-bookings{background:#fafbfa!important;margin:0!important;padding-top:0!important}
+ .player-bookings #navbar-container,.player-bookings #sidebar-container,.player-bookings #footer-container{display:none!important}
+ body.customer-portal.player-bookings main.portal-main{display:block!important;margin:0!important;padding:0 0 calc(90px + env(safe-area-inset-bottom))!important;max-width:none!important}
+ .player-bookings main.portal-main>:not(.mobile-bookings){display:none!important}
+ .mobile-bookings{display:block;max-width:600px;margin:auto}
+ .mobile-bookings>header{display:flex;align-items:center;justify-content:space-between;background:#003d28;color:white;height:50px;padding:0 10px}
+ .mobile-bookings>header button{width:40px;height:44px;background:transparent;border:0;color:white;font-size:1rem}.mobile-bookings>header strong{font-size:.9rem;font-weight:600}.mobile-bookings>header>span{width:40px}
+ .mobile-bookings-content{padding:12px;border-radius:16px 16px 0 0;background:#fafbfa}
+ .mobile-bookings-tabs{display:flex;background:#e9ece9;border-radius:999px;padding:3px;margin-bottom:12px;gap:4px}.mobile-bookings-tabs button{flex:1;background:transparent;border:0;border-radius:999px;min-height:36px;color:#617067;font-family:inherit;font-size:.8rem;font-weight:600}.mobile-bookings-tabs button[aria-selected=true]{background:#006b3e;color:white}
+ .mobile-bookings-list{display:flex;flex-direction:column;gap:10px}
+ .mobile-booking-card{display:flex;align-items:center;width:100%;gap:12px;padding:10px;background:white;border:1px solid #e4eae5;border-radius:12px;text-align:left;color:#17271d;font-family:inherit;cursor:pointer}
+ .mobile-booking-card>img{width:82px;height:82px;flex:0 0 82px;object-fit:cover;border-radius:8px;background:#f0f3f0}.mobile-booking-info{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}.mobile-booking-info>strong{font-size:.82rem;line-height:1.3}.mobile-booking-info>small{font-size:.68rem;color:#737e76;line-height:1.35}.mobile-booking-info small i{margin-right:3px}.mobile-booking-card>i{font-size:.8rem;color:#748079}
+ .mobile-booking-status{align-self:flex-start;background:#edf2ed;color:#586a5d;border-radius:999px;padding:3px 8px;font-size:.6rem;font-weight:600}.mobile-booking-status.confirmed{background:#e7f6e9;color:#18833b}.mobile-booking-status.pending,.mobile-booking-status.awaiting_payment{background:#fff5df;color:#a87517}.mobile-booking-status.cancelled,.mobile-booking-status.expired{background:#fff0f0;color:#b35b5b}
+ .mobile-bookings-more{display:block;margin:18px auto 0;min-height:44px;padding:10px 30px;border:1px solid #d9e6dc;border-radius:10px;background:white;color:#00733b;font-family:inherit;font-size:.8rem;font-weight:700}.mobile-bookings-more[hidden]{display:none}.mobile-bookings-more:disabled{opacity:.6}
+ .mobile-bookings-empty,.mobile-bookings-loading{text-align:center;padding:36px 16px;color:#728077;font-size:.8rem}.mobile-bookings-empty>i{display:block;font-size:2rem;margin-bottom:12px}.mobile-bookings-empty>strong{display:block;color:#284432}.mobile-bookings-empty a{color:#08783e}
+}
+@media(max-width:768px){
+ .mobile-booking-skeleton{pointer-events:none;min-height:116px}
+ .booking-skeleton-image{width:82px;height:82px;flex:0 0 82px;border-radius:8px}
+ .booking-skeleton-line{display:block;width:100%;height:12px;border-radius:5px;margin:2px 0}
+ .booking-skeleton-line.short{width:65%;height:10px}
+ .booking-skeleton-badge{display:block;width:70px;height:17px;border-radius:999px;margin-top:2px}
+ .booking-skeleton-shimmer,.mobile-booking-card>img.booking-skeleton-shimmer{background:linear-gradient(90deg,#eaf0ec 25%,#f7faf8 50%,#eaf0ec 75%);background-size:200% 100%;animation:bookingSkeletonShimmer 1.4s ease-in-out infinite}
+}
+@keyframes bookingSkeletonShimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+@media(prefers-reduced-motion:reduce){.booking-skeleton-shimmer,.mobile-booking-card>img.booking-skeleton-shimmer{animation:none}}

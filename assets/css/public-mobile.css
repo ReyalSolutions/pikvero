@@ -1,0 +1,80 @@
+/* Shared compact mobile treatment for Open Play and owner pricing. */
+@media (max-width: 768px) {
+  :is(.open-play-page, .pricing-page)::before { background: rgba(248,250,248,.94); }
+  :is(.open-play-page, .pricing-page) :is(.op-main-container, .pricing-page-container) { padding: 84px 16px 32px; }
+  :is(.open-play-page, .pricing-page) :is(a, button):focus-visible { outline: 3px solid #0d9488; outline-offset: 3px; }
+  :is(.open-play-page, .pricing-page) .pikvero-global-footer { padding: 32px 16px 20px; }
+  :is(.open-play-page, .pricing-page) .footer-top-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 16px; }
+  :is(.open-play-page, .pricing-page) .footer-brand-col { grid-column: 1 / -1; }
+
+  .open-play-page .op-hero-card { padding: 18px; border-radius: 16px; background-image: none; border: 1px solid #dce4df; box-shadow: 0 3px 12px rgba(12,26,21,.05); margin-bottom: 16px; }
+  .open-play-page .op-hero-top-row { gap: 10px; margin-bottom: 12px; }
+  .open-play-page .op-eyebrow-badge { padding: 6px 10px; font-size: .66rem; box-shadow: none; }
+  .open-play-page .btn-hero-cta { min-height: 44px; padding: 10px 12px; border-radius: 12px; box-shadow: none; font-size: .82rem; }
+  .open-play-page .op-hero-title { font-size: clamp(1.8rem, 7vw, 2.5rem); text-transform: none; line-height: 1.1; }
+  .open-play-page .op-hero-desc { font-size: .9rem; margin-bottom: 14px; }
+  .open-play-page .op-benefits-row { gap: 6px; }
+  .open-play-page .benefit-pill { padding: 6px 8px; font-family: inherit; font-size: .72rem; text-transform: none; letter-spacing: 0; box-shadow: none; }
+  .open-play-page .op-filter-capsule { padding: 12px; border-radius: 16px; gap: 10px; margin-bottom: 16px; background: #fff; box-shadow: 0 3px 12px rgba(12,26,21,.05); }
+  .open-play-page .op-search-wrap { width: 100%; flex-basis: 100%; min-width: 0; min-height: 44px; }
+  .open-play-page .op-search-input { min-width: 0; font-size: 16px; }
+  .open-play-page .op-clear-btn { min-width: 44px; min-height: 44px; }
+  .open-play-page .op-date-pills-wrap { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; overflow: visible; padding: 0; }
+  .open-play-page .op-date-pill { justify-content: center; min-height: 44px; padding: 8px; border-radius: 12px; box-shadow: none; font-size: .78rem; }
+  .open-play-page .op-results-header { gap: 12px; margin-bottom: 16px; }
+  .open-play-page .op-count-badge { font-family: inherit; font-size: .86rem; letter-spacing: 0; }
+  .open-play-page .op-showing-select-wrap { min-width: 0; }
+  .open-play-page .op-showing-select-wrap select { min-height: 44px; }
+  .open-play-page .op-sessions-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .open-play-page .op-session-card { padding: 16px; border-radius: 16px; background: #fff; box-shadow: 0 3px 12px rgba(12,26,21,.05); }
+  .open-play-page .op-card-top-row { flex-wrap: wrap; gap: 8px; }
+  .open-play-page .op-badge-tag { white-space: nowrap; }
+  .open-play-page .op-card-session-title { font-size: 1.15rem; text-transform: none; line-height: 1.25; }
+  .open-play-page .op-card-venue-row { font-size: .8rem; overflow-wrap: anywhere; }
+  .open-play-page .op-sched-box { padding: 10px; }
+  .open-play-page .op-sched-row { flex-wrap: wrap; gap: 4px 8px; }
+  .open-play-page .op-card-footer { gap: 12px; flex-wrap: wrap; }
+  .open-play-page .btn-join-pass { min-height: 44px; border-radius: 12px; box-shadow: none; justify-content: center; }
+  .open-play-page .op-empty-card { padding: 28px 16px; border-radius: 16px; }
+  .open-play-page .op-calendar-icon-box { width: 52px; height: 52px; margin-bottom: 12px; }
+  .open-play-page .op-empty-title { font-size: 1.2rem; }
+  .open-play-page .op-empty-desc { font-size: .88rem; }
+  .open-play-page .btn-book-regular { min-height: 44px; border-radius: 12px; padding: 10px 14px; box-shadow: none; }
+  .open-play-page .op-host-card { margin-top: 24px; padding: 18px; gap: 14px; border-radius: 16px; background: #fff; box-shadow: none; }
+  .open-play-page .host-title { font-size: 1rem; text-transform: none; align-items: flex-start; }
+  .open-play-page .btn-host-cta { min-height: 44px; box-shadow: none; }
+
+  .pricing-page .pricing-hero { padding: 0; margin-bottom: 18px; text-align: left; }
+  .pricing-page .pricing-hero::before { display: none; }
+  .pricing-page .pricing-eyebrow { font-size: .66rem; letter-spacing: .06em; padding: 6px 10px; box-shadow: none; margin-bottom: 10px; }
+  .pricing-page .pricing-hero h1 { font-size: clamp(1.8rem, 7vw, 2.5rem); text-transform: none; text-shadow: none; margin-bottom: 8px; }
+  .pricing-page .pricing-hero p { font-size: .9rem; font-weight: 500; text-shadow: none; }
+  .pricing-page .billing-toggle-wrap { margin-bottom: 20px; }
+  .pricing-page .billing-toggle-pill { width: 100%; justify-content: center; flex-wrap: wrap; gap: 8px; padding: 8px; border-radius: 16px; background: #fff; box-shadow: none; }
+  .pricing-page .billing-toggle-label { font-family: inherit; font-size: .78rem; min-height: 44px; display: inline-flex; align-items: center; gap: 6px; letter-spacing: 0; }
+  .pricing-page .billing-toggle-label.inactive { opacity: .7; }
+  .pricing-page .yearly-badge { padding: 3px 6px; font-size: .62rem; white-space: nowrap; }
+  .pricing-page .toggle-switch { flex-shrink: 0; width: 48px; height: 44px; }
+  .pricing-page .toggle-switch input { display: block; position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; z-index: 1; cursor: pointer; }
+  .pricing-page .toggle-switch input:focus-visible + .toggle-track { outline: 3px solid #0d9488; outline-offset: 3px; }
+  .pricing-page .toggle-track { top: 9px; bottom: 9px; }
+  .pricing-page .plans-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; margin-bottom: 24px; }
+  .pricing-page .plan-card { padding: 20px 16px; border-radius: 16px; box-shadow: 0 3px 12px rgba(12,26,21,.06); min-width: 0; }
+  .pricing-page .plan-card.plan-featured { border: 2px solid #a8c722; }
+  .pricing-page .plan-top-row { flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .pricing-page .plan-pill-tag { font-size: .66rem; padding: 5px 9px; white-space: nowrap; box-shadow: none; }
+  .pricing-page .plan-price-wrap { flex-wrap: wrap; }
+  .pricing-page .price-val { font-size: 2rem; }
+  .pricing-page .plan-desc { font-size: .88rem; margin-bottom: 16px; }
+  .pricing-page .plan-specs-box { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 10px 6px; margin-bottom: 16px; border-radius: 12px; }
+  .pricing-page .spec-num { font-size: 1.05rem; }
+  .pricing-page .spec-lbl { font-size: .62rem; letter-spacing: 0; }
+  .pricing-page .plan-features-list { gap: 8px; margin-bottom: 18px; }
+  .pricing-page .plan-features-list li { font-size: .84rem; gap: 8px; }
+  .pricing-page .btn-plan-cta { min-height: 46px; border-radius: 12px; box-shadow: none; }
+  .pricing-page .pricing-trust-strip { justify-content: flex-start; gap: 8px; margin-bottom: 24px; }
+  .pricing-page .trust-pill { font-family: inherit; font-size: .76rem; padding: 6px 10px; box-shadow: none; }
+  .pricing-page .pricing-faq-section { width: 100%; padding: 18px 16px; border-radius: 16px; background: #fff; box-shadow: none; }
+  .pricing-page .pricing-faq-title { font-size: 1.15rem; text-transform: none; margin-bottom: 8px; align-items: flex-start; }
+  .pricing-page .pricing-faq-item { padding: 12px 0; }
+}

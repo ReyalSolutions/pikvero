@@ -17,11 +17,41 @@ $allSettings = $settingRepo->getAllAsMap();
 
 $platformFeePct = (float)($allSettings['platform_commission_pct'] ?? $allSettings['platform_fee_percent'] ?? 10.0);
 $paymongoFeePct  = (float)($allSettings['paymongo_fee_percent'] ?? 2.5);
+$passGatewayFee = ($allSettings['payment_gateway_fee_pass'] ?? '0') === '1';
+$qrEnabled = !isset($allSettings['paymongo_enable_qrph']) || $allSettings['paymongo_enable_qrph'] === '1';
+
+if ($action === 'pass') {
+    if (!$isLoggedIn) { Response::unauthorized('Please sign in to view your pass.'); exit; }
+    $id = (int)$request->get('id', 0);
+    $sessionId = (int)$request->get('session_id', 0);
+    $pass = $db->selectOne("SELECT r.*, s.title AS session_title, s.session_date, s.start_time, s.end_time, s.status AS session_status, f.name AS facility_name
+        FROM open_play_registrations r JOIN open_play_sessions s ON s.id=r.session_id JOIN facilities f ON f.id=s.facility_id
+        WHERE r.user_id=? AND " . ($id > 0 ? 'r.id=?' : 'r.session_id=?') . ' ORDER BY r.id DESC LIMIT 1', [$userId, $id > 0 ? $id : $sessionId], 'ii');
+    if (!$pass) { Response::error('Pass not found.'); exit; }
+    $today = (new DateTimeImmutable('now', new DateTimeZone('Asia/Manila')))->format('Y-m-d');
+    $pass['is_expired'] = $pass['session_date'] < $today;
+    $pass['is_event_day'] = $pass['session_date'] === $today;
+    Response::success('Your event pass', $pass); exit;
+}
+
+if ($action === 'detail') {
+    $session = $db->selectOne("SELECT s.*, f.name AS facility_name, f.city,
+        (SELECT COUNT(*) FROM open_play_registrations r WHERE r.session_id=s.id AND r.payment_status!='refunded') AS registered_players,
+        (SELECT COUNT(*) FROM open_play_registrations r WHERE r.session_id=s.id AND r.user_id=? AND r.payment_status!='refunded') AS is_user_registered
+        FROM open_play_sessions s JOIN facilities f ON f.id=s.facility_id WHERE s.id=?", [$userId, (int)$request->get('id', 0)], 'ii');
+    if (!$session) { Response::error('Session not found'); exit; }
+    $session['photos'] = $db->select('SELECT image_path FROM facility_images WHERE facility_id=? ORDER BY is_primary DESC,id', [(int)$session['facility_id']], 'i');
+    $session['attendees'] = $isLoggedIn && (int)$session['is_user_registered'] > 0
+        ? $db->select("SELECT player_name, (user_id=?) AS is_you FROM open_play_registrations WHERE session_id=? AND payment_status!='refunded' ORDER BY id", [$userId, (int)$session['id']], 'ii') : [];
+    Response::success('Session details loaded', $session);
+    exit;
+}
 
 if ($action === 'fees') {
     Response::success('Fee settings loaded', [
         'platform_fee_pct' => $platformFeePct,
-        'paymongo_fee_pct' => $paymongoFeePct
+        'paymongo_fee_pct' => $passGatewayFee ? $paymongoFeePct : 0,
+        'qrph_enabled' => $qrEnabled
     ]);
     exit;
 }
@@ -37,6 +67,9 @@ if ($request->getMethod() === 'POST' && $action === 'join') {
     $playerName = trim($data['player_name'] ?? '');
     $playerPhone = trim($data['player_phone'] ?? '');
     $paymentMethod = strtolower(trim($data['payment_method'] ?? 'cash'));
+    if (!in_array($paymentMethod, ['qrph', 'cash'], true) || ($paymentMethod === 'qrph' && !$qrEnabled)) {
+        Response::error('Selected payment method is unavailable.'); exit;
+    }
 
     if ($sessionId <= 0 || empty($playerName)) {
         Response::error('Session ID and player name are required.');
@@ -81,9 +114,9 @@ if ($request->getMethod() === 'POST' && $action === 'join') {
     $basePrice = (float)($session['fee_per_player'] ?? 70.00);
 
     // Online Payment via PayMongo (GCash / Card)
-    if ($paymentMethod === 'gcash' || $paymentMethod === 'card' || $paymentMethod === 'paymaya') {
+    if ($paymentMethod === 'qrph') {
         $platformFee = round($basePrice * ($platformFeePct / 100), 2);
-        $gatewayFee  = round($basePrice * ($paymongoFeePct / 100), 2);
+        $gatewayFee  = $passGatewayFee ? round($basePrice * ($paymongoFeePct / 100), 2) : 0;
         $grandTotal  = $basePrice + $platformFee + $gatewayFee;
 
         // Insert pending registration
@@ -102,7 +135,6 @@ if ($request->getMethod() === 'POST' && $action === 'join') {
         $cancelUrl  = "{$baseUrl}/pikvero/public/customer/open-play.php?payment=cancelled";
 
         $pmTypes = [$paymentMethod];
-        if ($paymentMethod === 'gcash') $pmTypes = ['gcash', 'paymaya', 'card'];
 
         $checkoutPayload = [
             'data' => [
@@ -121,16 +153,9 @@ if ($request->getMethod() === 'POST' && $action === 'join') {
                         ],
                         [
                             'currency'    => 'PHP',
-                            'amount'      => (int)round($platformFee * 100),
-                            'description' => "Platform Service Fee (" . number_format($platformFeePct, 1) . "%)",
-                            'name'        => "Platform Service Fee",
-                            'quantity'    => 1
-                        ],
-                        [
-                            'currency'    => 'PHP',
-                            'amount'      => (int)round($gatewayFee * 100),
-                            'description' => "PayMongo Online Gateway Fee (" . number_format($paymongoFeePct, 1) . "%)",
-                            'name'        => "PayMongo Gateway Fee",
+                            'amount'      => (int)round(($platformFee + $gatewayFee) * 100),
+                            'description' => 'Service fees',
+                            'name'        => 'Service fees',
                             'quantity'    => 1
                         ]
                     ],
@@ -140,6 +165,7 @@ if ($request->getMethod() === 'POST' && $action === 'join') {
                 ]
             ]
         ];
+        $checkoutPayload['data']['attributes']['line_items'] = array_values(array_filter($checkoutPayload['data']['attributes']['line_items'], fn($item) => $item['amount'] > 0));
 
         $apiUrl = 'https://api.paymongo.com/v1/checkout_sessions';
         $authHeader = 'Basic ' . base64_encode($secretKey . ':');
@@ -177,9 +203,8 @@ if ($request->getMethod() === 'POST' && $action === 'join') {
             ]);
             exit;
         } else {
-            // Fallback: If cURL / PayMongo test key fails, mark paid and allow registration
-            $db->execute("UPDATE open_play_registrations SET payment_status = 'paid' WHERE id = ?", [$regId], 'i');
-            Response::success('Open Play session joined successfully!', ['registration_id' => $regId]);
+            $db->execute("DELETE FROM open_play_registrations WHERE id=? AND payment_status='pending'", [$regId], 'i');
+            Response::error('Unable to start QR Ph payment. Please try again.');
             exit;
         }
     } else {
@@ -239,6 +264,11 @@ if ($action === 'my_passes') {
         ORDER BY r.id DESC
     ", [$userId], 'i');
 
+    $today = (new \DateTimeImmutable('now', new \DateTimeZone('Asia/Manila')))->format('Y-m-d');
+    foreach ($passes as &$pass) {
+        $pass['is_expired'] = $pass['session_date'] < $today;
+    }
+    unset($pass);
     Response::success('My passes loaded', $passes);
     exit;
 }
@@ -246,6 +276,7 @@ if ($action === 'my_passes') {
 // Default: List available open play sessions
 $sessions = $db->select("
     SELECT s.*, f.name AS facility_name, f.city,
+           (SELECT fi.image_path FROM facility_images fi WHERE fi.facility_id=f.id ORDER BY fi.is_primary DESC,fi.id LIMIT 1) AS facility_image,
            (SELECT COUNT(*) FROM open_play_registrations r WHERE r.session_id = s.id AND r.payment_status != 'refunded') AS registered_players,
            (SELECT COUNT(*) FROM open_play_registrations r WHERE r.session_id = s.id AND r.user_id = ? AND r.payment_status != 'refunded') AS is_user_registered
     FROM open_play_sessions s

@@ -1,0 +1,56 @@
+/* Compact mobile marketplace layout. */
+@media (max-width: 768px) {
+  .search-page .search-hero-inner { padding: 84px 16px 24px; }
+  .search-page .search-hero-section::before { background: rgba(255,255,255,.94); }
+  .search-page .search-eyebrow { font-size: .68rem; letter-spacing: .04em; margin-bottom: 8px; }
+  .search-page .search-hero-title { text-transform: none; line-height: 1.1; margin-bottom: 8px; }
+  .search-page .search-hero-title .title-ink,
+  .search-page .search-hero-title .title-coral { display: inline; font-size: clamp(1.8rem, 7vw, 2.5rem); }
+  .search-page .search-hero-desc { font-size: .9rem; margin-bottom: 16px; }
+  .search-page .quick-chips-bar { gap: 8px; margin-bottom: 16px; }
+  .search-page .quick-chip-pill { min-height: 44px; padding: 8px 12px; font-size: .78rem; box-shadow: none; }
+  .search-page .search-widget-pill { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 12px; border-radius: 16px; gap: 10px; box-shadow: 0 4px 16px rgba(12,26,21,.08); }
+  .search-page .search-input-box { grid-column: 1 / -1; min-width: 0; min-height: 44px; gap: 8px; }
+  .search-page .search-input-box input { min-width: 0; font-size: 16px; }
+  .search-page .clear-input-btn { min-width: 44px; min-height: 44px; }
+  .search-page .btn-filters-toggle,
+  .search-page .btn-search-action { min-height: 44px; padding: 10px 12px; box-shadow: none; border-radius: 12px; }
+  .search-page .filters-drawer-panel { padding: 16px; border-radius: 16px; margin-top: 12px; box-shadow: 0 4px 16px rgba(12,26,21,.06); }
+  .search-page .filters-grid-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .search-page .filter-field-group:first-child { grid-column: 1 / -1; }
+  .search-page .filter-field-group { min-width: 0; }
+  .search-page .filter-field-group label { font-family: inherit; text-transform: none; font-size: .78rem; }
+  .search-page .filter-field-group input,
+  .search-page .filter-field-group select { min-width: 0; min-height: 44px; padding: 8px; font-size: 16px; }
+  .search-page .amenity-toggle-pill { min-height: 44px; padding: 8px 12px; }
+  .search-page .drawer-actions-bar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .search-page .drawer-actions-bar button { min-height: 44px; padding: 8px; }
+  .search-page .results-main-wrap { padding: 20px 16px 32px; width: 100%; }
+  .search-page .results-controls-row { align-items: stretch; gap: 12px; margin-bottom: 16px; padding-bottom: 14px; }
+  .search-page .results-count-badge { font-family: inherit; font-size: .88rem; text-transform: none; letter-spacing: 0; }
+  .search-page .results-actions-right { width: 100%; min-width: 0; }
+  .search-page .sort-select-wrap { width: 100%; min-width: 0; }
+  .search-page .sort-select-wrap select { flex: 1; min-width: 0; min-height: 44px; }
+  .search-page .view-toggle-btns { display: none; }
+  .search-page .courts-results-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .search-page .court-card { border-radius: 16px; box-shadow: 0 3px 12px rgba(12,26,21,.05); }
+  .search-page .card-carousel-wrap { height: 180px; }
+  .search-page .card-floating-badges { top: 12px; left: 12px; right: 12px; flex-wrap: wrap; gap: 8px; }
+  .search-page .pill-badge { white-space: nowrap; }
+  .search-page .card-body { padding: 14px; }
+  .search-page .card-location { min-width: 0; font-size: .78rem; overflow-wrap: anywhere; }
+  .search-page .btn-favorite { flex-shrink: 0; width: 44px; height: 44px; }
+  .search-page .card-title { font-size: 1.15rem; line-height: 1.25; text-transform: none; margin-bottom: 10px; }
+  .search-page .card-amenities-row { margin-bottom: 14px; }
+  .search-page .card-footer-row { flex-wrap: wrap; gap: 12px; padding-top: 12px; }
+  .search-page .btn-book-court { min-height: 44px; justify-content: center; border-radius: 12px; box-shadow: none; white-space: nowrap; }
+  .search-page .rate-amount { white-space: nowrap; }
+  .search-page .empty-state-card { padding: 28px 16px; margin: 0; border-radius: 16px; }
+  .search-page .pikvero-global-footer { padding: 32px 16px 20px; }
+  .search-page .footer-top-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 16px; }
+  .search-page .footer-brand-col { grid-column: 1 / -1; }
+  .search-page button:focus-visible, .search-page a:focus-visible, .search-page input:focus-visible, .search-page select:focus-visible { outline: 3px solid #0d9488; outline-offset: 3px; }
+}
+@media (max-width: 360px) {
+  .search-page .filters-grid-fields { grid-template-columns: minmax(0, 1fr); }
+}

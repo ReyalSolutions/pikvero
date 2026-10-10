@@ -179,6 +179,7 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
       transition: width 0.3s ease;
     }
   </style>
+<?php require_once __DIR__ . '/../../includes/subscription-gate.php'; ?>
 </head>
 <body>
 

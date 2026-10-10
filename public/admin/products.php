@@ -102,6 +102,7 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
       cursor: not-allowed !important;
     }
   </style>
+<?php require_once __DIR__ . '/../../includes/subscription-gate.php'; ?>
 </head>
 <body>
 

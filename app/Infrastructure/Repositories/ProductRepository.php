@@ -22,7 +22,7 @@ class ProductRepository {
         $types = "";
 
         if ($facilityId !== null && $facilityId > 0) {
-            $whereClauses[] = "(p.facility_id = ? OR p.facility_id IS NULL)";
+            $whereClauses[] = "p.facility_id = ?";
             $params[] = $facilityId;
             $types .= "i";
         }
@@ -37,7 +37,9 @@ class ProductRepository {
 
         $whereSql = implode(" AND ", $whereClauses);
 
-        $totalCountRow = $this->db->selectOne("SELECT COUNT(*) AS total FROM products p WHERE p.status != 'archived'");
+        $totalCountRow = $facilityId !== null && $facilityId > 0
+            ? $this->db->selectOne("SELECT COUNT(*) AS total FROM products p WHERE p.status != 'archived' AND p.facility_id = ?", [$facilityId], 'i')
+            : $this->db->selectOne("SELECT COUNT(*) AS total FROM products p WHERE p.status != 'archived'");
         $recordsTotal = (int)($totalCountRow['total'] ?? 0);
 
         $filteredCountRow = $this->db->selectOne("

@@ -1,0 +1,28 @@
+(() => {
+ const esc=value=>{const el=document.createElement('span');el.textContent=value??'';return el.innerHTML;};
+ window.showOpenPlayDetails=async id=>{
+  const page=document.createElement('section');page.className='op-event-details';page.innerHTML='<header><button type="button" aria-label="Back"><i class="bi bi-chevron-left"></i></button><strong>Event Details</strong><span></span></header><main><div class="op-loading-card"><div class="op-loading-image op-skeleton"></div><div class="op-loading-lines"><span class="op-skeleton"></span><span class="op-skeleton"></span></div></div></main>';
+  document.body.append(page);document.body.classList.add('op-event-details-view');
+  const close=()=>{page.remove();document.body.classList.remove('op-event-details-view');};page.querySelector('header button').onclick=close;
+  try{
+   const res=await Api.get('/pikvero/api/customer/open-play.php',{action:'detail',id});if(!res.success)throw Error('Unable to load event');if(!page.isConnected)return;
+   const s=res.data;const photos=s.photos.map(p=>p.image_path);let index=0;
+   const date=new Date(s.session_date+'T12:00:00').toLocaleDateString('en',{month:'short',day:'numeric',year:'numeric'});
+   const time=v=>new Date('2000-01-01T'+v).toLocaleTimeString('en',{hour:'numeric',minute:'2-digit'});
+   const full=Number(s.registered_players)>=Number(s.max_players)||s.status==='full';const past=s.session_date<new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Manila'});const joined=Number(s.is_user_registered)>0;
+   page.querySelector('main').innerHTML='<div class="op-event-hero"><img src="'+esc(photos[0]||'/pikvero/assets/images/logo.png')+'" alt="'+esc(s.facility_name)+'"><span>'+ (photos.length?'1/'+photos.length:'')+'</span></div><div class="op-event-content"><span class="op-event-badge">Open Play</span><h1>'+esc(s.title)+'</h1><p><i class="bi bi-geo-alt"></i> '+esc(s.facility_name)+'</p><div class="op-event-facts"><div><i class="bi bi-people"></i> '+Number(s.registered_players)+'/'+Number(s.max_players)+'<small>players</small></div><div><i class="bi bi-calendar-event"></i> '+esc(date)+'<small>'+esc(time(s.start_time)+' – '+time(s.end_time))+'</small></div></div><p><i class="bi bi-geo-alt"></i> '+esc(s.facility_name)+(s.city?' · '+esc(s.city):'')+'</p><div class="op-event-info"><div><i class="bi bi-person-check"></i><small>Skill Level</small><strong>Not specified</strong></div><div><i class="bi bi-grid"></i><small>Court</small><strong>Not assigned</strong></div><div><i class="bi bi-trophy"></i><small>Type</small><strong>Open Play</strong></div></div><h2>About This Event</h2><p>Player entry at '+esc(s.facility_name)+'.</p><p class="op-event-fee">Entry fee <strong>₱'+Number(s.fee_per_player).toFixed(2)+'</strong></p><button class="op-event-join" type="button" '+(full||past||s.status==='cancelled'?'disabled':'')+'>'+(joined?'View My Pass':past?'Event ended':s.status==='cancelled'?'Cancelled':full?'Full':'Join Event')+'</button></div>';
+   if(joined){
+    const content=page.querySelector('.op-event-content');content.querySelector('.op-event-badge').textContent='Joined';content.querySelector('.op-event-badge').classList.add('is-joined');
+    const info=content.querySelector('.op-event-info');info.innerHTML='<div><i class="bi bi-people"></i><strong>'+Number(s.registered_players)+'/'+Number(s.max_players)+'</strong><small>players</small></div><div><i class="bi bi-ticket"></i><strong>'+(Number(s.fee_per_player)===0?'Free':'₱'+Number(s.fee_per_player).toFixed(2))+'</strong><small>event fee</small></div><div><i class="bi bi-person-check"></i><strong>Not specified</strong><small>skill level</small></div>';
+    const attendees=document.createElement('div');attendees.className='op-event-attendees';attendees.innerHTML='<div class="op-attendees-heading"><h2>Attendees ('+Number(s.registered_players)+')</h2><button type="button">View All</button></div><div class="op-attendees-list">'+(s.attendees||[]).slice(0,5).map(a=>'<div><span>'+esc(a.player_name.slice(0,1).toUpperCase())+'</span><small>'+esc(Number(a.is_you)?'You':a.player_name.split(' ')[0])+'</small></div>').join('')+((s.attendees||[]).length>5?'<div><span>+'+(s.attendees.length-5)+'</span></div>':'')+'</div>';
+    info.after(attendees);attendees.querySelector('button').onclick=()=>{const dialog=document.createElement('dialog');dialog.className='op-attendees-dialog';dialog.innerHTML='<h2>Attendees</h2><ul>'+s.attendees.map(a=>'<li>'+esc(Number(a.is_you)?a.player_name+' (You)':a.player_name)+'</li>').join('')+'</ul><button type="button">Close</button>';page.append(dialog);dialog.querySelector('button').onclick=()=>dialog.close();dialog.onclose=()=>dialog.remove();dialog.showModal();};
+    content.querySelector('h2:not(.op-attendees-heading h2)').textContent='Event Description';
+   }
+   page.querySelector('.op-event-join').disabled=joined?false:full||past||s.status==='cancelled';
+   const hero=page.querySelector('.op-event-hero');let startX=0;
+   hero.ontouchstart=e=>{startX=e.changedTouches[0].clientX;};hero.ontouchend=e=>{const dx=e.changedTouches[0].clientX-startX;if(Math.abs(dx)<35||photos.length<2)return;index=(index+(dx<0?1:-1)+photos.length)%photos.length;hero.querySelector('img').src=photos[index];hero.querySelector('span').textContent=(index+1)+'/'+photos.length;};
+   page.querySelector('.op-event-join').onclick=()=>{close();if(joined){showOpenPlayPass({session_id:s.id});return;}if(!availableSessions.some(item=>item.id==s.id))availableSessions.push(s);window.showOpenPlayJoin(s);};
+  }catch(e){if(page.isConnected)page.querySelector('main').innerHTML='<p class="op-event-content" role="status">Unable to load event details. Go back and try again.</p>';}
+ };
+})();
+

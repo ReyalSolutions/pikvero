@@ -1,0 +1,20 @@
+(() => {
+ const esc=v=>{const el=document.createElement('span');el.textContent=v??'';return el.innerHTML;};
+ const money=v=>'₱'+Number(v).toFixed(2);
+ window.showOpenPlayJoin=async s=>{
+  const page=document.createElement('section');page.className='op-event-details op-join-page';
+  const date=new Date(s.session_date+'T12:00:00').toLocaleDateString('en',{month:'short',day:'numeric',year:'numeric'});
+  const time=v=>new Date('2000-01-01T'+v).toLocaleTimeString('en',{hour:'numeric',minute:'2-digit'});
+  page.innerHTML='<header><button type="button" aria-label="Back"><i class="bi bi-chevron-left"></i></button><strong>Join Event</strong><span></span></header><main><div class="op-join-session"><img src="'+esc(s.photos?.[0]?.image_path||s.facility_image||'/pikvero/assets/images/logo.png')+'" alt="'+esc(s.facility_name)+'"><div><strong>'+esc(s.title)+'</strong><small><i class="bi bi-geo-alt"></i> '+esc(s.facility_name)+'</small><small><i class="bi bi-calendar-event"></i> '+esc(date)+' · '+esc(time(s.start_time)+' – '+time(s.end_time))+'</small><small>Court not assigned</small></div></div><div class="op-event-content"><h2>Player Information</h2><button type="button" class="op-join-player"><i class="bi bi-person-circle"></i><span><strong>'+esc(window.openPlayPlayer.name)+'</strong><small>'+esc(window.openPlayPlayer.email)+'</small></span><i class="bi bi-chevron-right"></i></button><div class="op-join-edit" hidden><label>Player name<input type="text" maxlength="120" value="'+esc(document.getElementById('join-player-name').value)+'"></label><label>Contact phone<input type="tel" value="'+esc(document.getElementById('join-player-phone').value)+'"></label></div><h2>Additional Players (Optional)</h2><p class="op-join-hint">Each player currently needs their own account to join.</p><h2>Payment Summary</h2><div class="op-join-summary" aria-busy="true"><div class="op-loading-lines"><span class="op-skeleton"></span><span class="op-skeleton"></span><span class="op-skeleton"></span></div></div><div class="op-join-footer"><button class="op-event-join" type="button" disabled>Continue</button><small><i class="bi bi-lock-fill"></i> Continue to payment selection</small></div></div></main>';
+  document.body.append(page);document.body.classList.add('op-event-details-view');
+  const close=()=>{page.remove();document.body.classList.remove('op-event-details-view');};page.querySelector('header button').onclick=()=>{close();showOpenPlayDetails(s.id);};
+  page.querySelector('.op-join-player').onclick=()=>{const edit=page.querySelector('.op-join-edit');edit.hidden=!edit.hidden;};
+  try{
+   const res=await Api.get('/pikvero/api/customer/open-play.php',{action:'fees'});if(!res.success)throw Error();if(!page.isConnected)return;
+   feeSettings=res.data;const base=Number(s.fee_per_player);const platform=Math.round(base*Number(feeSettings.platform_fee_pct))/100;const gateway=Math.round(base*Number(feeSettings.paymongo_fee_pct))/100;const fees=platform+gateway;
+   const summary=page.querySelector('.op-join-summary');summary.setAttribute('aria-busy','false');summary.innerHTML='<div><span>Event Fee (Open Play)</span><strong>'+(base===0?'Free':money(base))+'</strong></div><div><span>Service fees (online payment)</span><strong>'+money(fees)+'</strong></div><div class="op-join-total"><span>Total</span><strong>'+money(base+fees)+'</strong></div><small>Pay at Court total: '+money(base)+'</small>';
+   const next=page.querySelector('.op-event-join');next.disabled=false;next.onclick=()=>{const inputs=page.querySelectorAll('.op-join-edit input');if(!inputs[0].value.trim()||!inputs[1].value.trim()){page.querySelector('.op-join-edit').hidden=false;Toast.error('Player information required','Enter your name and contact phone.');return;}document.getElementById('join-player-name').value=inputs[0].value.trim();document.getElementById('join-player-phone').value=inputs[1].value.trim();close();window.showOpenPlayPayment(s);};
+  }catch(e){if(page.isConnected)page.querySelector('.op-join-summary').innerHTML='<p role="status">Unable to load fees. Go back and try again.</p>';}
+ };
+})();
+

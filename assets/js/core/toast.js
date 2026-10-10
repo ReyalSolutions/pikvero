@@ -5,6 +5,16 @@ const Toast = {
   container: null,
 
   init() {
+    // Every page uses the current shared notification design, including pages
+    // with older or missing stylesheet references.
+    const stylesheetUrl = '/pikvero/assets/css/toast.css?v=20261010-2';
+    let stylesheet = document.querySelector('link[href*="/assets/css/toast.css"]');
+    if (!stylesheet) {
+      stylesheet = document.createElement('link');
+      stylesheet.rel = 'stylesheet';
+      document.head.appendChild(stylesheet);
+    }
+    if (stylesheet.getAttribute('href') !== stylesheetUrl) stylesheet.href = stylesheetUrl;
     if (!this.container) {
       this.container = document.createElement('div');
       this.container.id = 'toast-container';
@@ -51,14 +61,18 @@ const Toast = {
 
     const item = document.createElement('div');
     item.className = `toast-item ${type}`;
+    item.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    item.setAttribute('aria-atomic', 'true');
     item.innerHTML = `
-      <div class="toast-icon">${icons[type] || 'ℹ'}</div>
+      <div class="toast-icon" aria-hidden="true">${icons[type] || 'ℹ'}</div>
       <div class="toast-content">
-        <div class="toast-title">${title}</div>
-        <div class="toast-message">${message}</div>
+        <div class="toast-title"></div>
+        <div class="toast-message"></div>
       </div>
-      <button class="toast-close">&times;</button>
+      <button type="button" class="toast-close" aria-label="Dismiss notification">&times;</button>
     `;
+    item.querySelector('.toast-title').textContent = title;
+    item.querySelector('.toast-message').textContent = message;
 
     item.querySelector('.toast-close').addEventListener('click', () => {
       item.remove();

@@ -22,7 +22,7 @@ $isOwner = ($role === 'court_owner');
   <link rel="shortcut icon" type="image/png" href="<?= htmlspecialchars($favLogo) ?>?v=<?= time() ?>">
   <link rel="apple-touch-icon" href="<?= htmlspecialchars($favLogo) ?>?v=<?= time() ?>">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <link rel="stylesheet" href="/pikvero/assets/css/streetside-theme.css">
+  <link rel="stylesheet" href="/pikvero/assets/css/streetside-theme.css?v=<?= filemtime(__DIR__ . '/../../assets/css/streetside-theme.css') ?>">
   <link rel="stylesheet" href="/pikvero/assets/css/toast.css">
   <style>
     .fb-tab-btn {
@@ -52,6 +52,12 @@ $isOwner = ($role === 'court_owner');
       box-shadow: 3px 3px 0 var(--ink);
     }
   </style>
+<link rel="manifest" href="/pikvero/manifest.webmanifest">
+<meta name="theme-color" content="#003d2d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pikvero">
+<link rel="apple-touch-icon" href="/pikvero/assets/images/pwa/icon-180.png">
+<script defer src="/pikvero/assets/js/components/pwa.js?v=20261010"></script>
 </head>
 <body style="min-height:100vh; display:flex; flex-direction:column;">
 

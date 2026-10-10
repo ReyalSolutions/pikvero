@@ -55,7 +55,7 @@ if ($paymentStatus === 'success' && $regId > 0 && Auth::check()) {
   <link rel="shortcut icon" type="image/png" href="<?= htmlspecialchars($favLogo) ?>?v=<?= time() ?>">
   <link rel="apple-touch-icon" href="<?= htmlspecialchars($favLogo) ?>?v=<?= time() ?>">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <link rel="stylesheet" href="/pikvero/assets/css/streetside-theme.css">
+  <link rel="stylesheet" href="/pikvero/assets/css/streetside-theme.css?v=<?= filemtime(__DIR__ . '/../../assets/css/streetside-theme.css') ?>">
   <link rel="stylesheet" href="/pikvero/assets/css/modal.css">
   <link rel="stylesheet" href="/pikvero/assets/css/toast.css">
   <style>
@@ -193,7 +193,15 @@ if ($paymentStatus === 'success' && $regId > 0 && Auth::check()) {
       }
     }
   </style>
-<body style="min-height:100vh; display:flex; flex-direction:column;">
+<link rel="stylesheet" href="/pikvero/assets/css/player-pages.css?v=2">
+<link rel="manifest" href="/pikvero/manifest.webmanifest">
+<meta name="theme-color" content="#003d2d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pikvero">
+<link rel="apple-touch-icon" href="/pikvero/assets/images/pwa/icon-180.png">
+<script defer src="/pikvero/assets/js/components/pwa.js?v=20261010"></script>
+</head>
+<body class="customer-portal player-open-play" style="min-height:100vh; display:flex; flex-direction:column;">
 
   <div id="navbar-container"></div>
 
@@ -201,11 +209,11 @@ if ($paymentStatus === 'success' && $regId > 0 && Auth::check()) {
     <div class="op-header-wrap" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
       <div>
         <div class="eyebrow">SOCIAL PICKLEBALL</div>
-        <h1 style="font-size: clamp(1.5rem, 4vw, 2.2rem); font-weight:800; text-transform:uppercase; margin:2px 0 0;">OPEN PLAY SESSIONS</h1>
+        <h1 style="font-size: clamp(1.5rem, 4vw, 2.2rem); font-weight:800; text-transform:uppercase; margin:2px 0 0;">Open play</h1>
       </div>
       <div class="op-header-actions" style="display:flex; gap:8px;">
         <a href="/pikvero/public/customer/bookings.php" class="button sand" style="padding:7px 14px; font-size:0.78rem;">
-          <i class="bi bi-calendar-check"></i> My Court Bookings
+          <i class="bi bi-calendar-check"></i> My bookings
         </a>
       </div>
     </div>
@@ -345,7 +353,7 @@ if ($paymentStatus === 'success' && $regId > 0 && Auth::check()) {
   <script src="/pikvero/assets/js/core/ajax.js"></script>
   <script src="/pikvero/assets/js/core/auth.js"></script>
   <script src="/pikvero/assets/js/components/navbar.js"></script>
-  <script src="/pikvero/assets/js/components/bottom-nav.js"></script>
+  <script src="/pikvero/assets/js/components/bottom-nav.js?v=<?= filemtime(__DIR__ . '/../../assets/js/components/bottom-nav.js') ?>"></script>
   <script src="/pikvero/assets/js/components/sidebar.js"></script>
   <script src="/pikvero/assets/js/components/footer.js"></script>
   <script>
@@ -364,8 +372,8 @@ if ($paymentStatus === 'success' && $regId > 0 && Auth::check()) {
         Toast.success('Payment Confirmed!', 'Your Open Play pass payment was completed via PayMongo GCash.');
         switchTab('my-passes');
       } else {
-        await loadAvailableSessions();
         const urlParams = new URLSearchParams(window.location.search);
+        await loadAvailableSessions();
         const autoJoinId = urlParams.get('join_session_id');
         if (autoJoinId) {
           openJoinModal(autoJoinId);
@@ -398,14 +406,24 @@ if ($paymentStatus === 'success' && $regId > 0 && Auth::check()) {
       }
     }
 
+    function showOpenPlaySkeleton(grid) {
+      grid.setAttribute('aria-busy', 'true');
+      grid.innerHTML = '<span class="op-loading-label" role="status">Loading sessions</span>' + Array.from({length: 4}, () => '<div class="op-loading-card" aria-hidden="true"><div class="op-loading-image op-skeleton"></div><div class="op-loading-lines"><span class="op-skeleton"></span><span class="op-skeleton"></span><span class="op-skeleton"></span><span class="op-skeleton"></span></div></div>').join('');
+    }
+
     async function loadAvailableSessions() {
       const grid = document.getElementById('sessions-grid');
-      grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px; color:#999;"><i class="bi bi-hourglass-split"></i> Loading open play sessions...</div>`;
+      showOpenPlaySkeleton(grid);
 
       try {
         const res = await Api.get('/pikvero/api/customer/open-play.php', { action: 'list' });
+        if (!res.success || !res.data) throw new Error('Unable to load sessions');
         if (res.success && res.data) {
           availableSessions = res.data;
+          if (matchMedia('(max-width:768px)').matches && window.renderMobileOpenPlay) {
+            window.renderMobileOpenPlay(availableSessions);
+            return;
+          }
           if (availableSessions.length === 0) {
             grid.innerHTML = `
               <div class="card-streetside sand" style="grid-column:1/-1; padding:30px; text-align:center;">
@@ -461,15 +479,19 @@ if ($paymentStatus === 'success' && $regId > 0 && Auth::check()) {
             `;
           }).join('');
         }
-      } catch (err) { console.error(err); }
+      } catch (err) {
+        console.error(err);
+        grid.innerHTML = '<div class="open-play-mobile-empty" role="status">Unable to load sessions. <button type="button" onclick="loadAvailableSessions()">Retry</button></div>';
+      } finally { grid.setAttribute('aria-busy', 'false'); }
     }
 
     async function loadMyPasses() {
       const grid = document.getElementById('my-passes-grid');
-      grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px; color:#999;"><i class="bi bi-hourglass-split"></i> Loading your open play passes...</div>`;
+      showOpenPlaySkeleton(grid);
 
       try {
         const res = await Api.get('/pikvero/api/customer/open-play.php', { action: 'my_passes' });
+        if (!res.success || !res.data) throw new Error('Unable to load passes');
         if (res.success && res.data) {
           const passes = res.data;
           if (passes.length === 0) {
@@ -482,6 +504,7 @@ if ($paymentStatus === 'success' && $regId > 0 && Auth::check()) {
           }
 
           grid.innerHTML = passes.map(p => {
+            const expired = p.is_expired === true;
             const pm = (p.payment_method || 'cash').toLowerCase();
             let pmBadge = '<span class="badge-streetside sand" style="font-size:0.60rem; padding:2px 6px; background:#fef3c7; color:#92400e; border:1px solid #f59e0b;"><i class="bi bi-cash-stack"></i> CASH AT COURT</span>';
             if (pm === 'gcash' || pm === 'paymaya' || pm === 'paymongo') {
@@ -497,7 +520,7 @@ if ($paymentStatus === 'success' && $regId > 0 && Auth::check()) {
                   <span class="badge-streetside lime" style="font-size:0.62rem; padding:2px 6px;">PASS #${p.id}</span>
                   <div style="display:flex; gap:4px; align-items:center;">
                     ${pmBadge}
-                    <span class="badge-streetside green" style="font-size:0.60rem; padding:2px 6px;">${(p.payment_status === 'paid' ? 'CONFIRMED' : p.payment_status).toUpperCase()}</span>
+                    <span class="badge-streetside ${expired ? 'op-pass-expired' : 'green'}" style="font-size:0.60rem; padding:2px 6px;">${expired ? 'EXPIRED' : escapeHtml((p.payment_status === 'paid' ? 'CONFIRMED' : p.payment_status || 'pending').toUpperCase())}</span>
                   </div>
                 </div>
 
@@ -507,6 +530,7 @@ if ($paymentStatus === 'success' && $regId > 0 && Auth::check()) {
 
               <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed var(--ink); padding-top:6px; margin-top:4px;">
                 <span style="font-size:0.8rem; font-weight:800;">Paid: ₱${parseFloat(p.amount_paid||0).toFixed(2)}</span>
+                <button type="button" class="op-pass-open" onclick="showOpenPlayPass({id:${Number(p.id)}})"><i class="bi bi-qr-code"></i> View My Pass</button>
                 <a href="/pikvero/public/open-play-receipt.php?registration_id=${p.id}" target="_blank" class="button lime" style="padding:5px 12px; font-size:0.75rem; text-decoration:none;">
                   <i class="bi bi-printer-fill"></i> Receipt
                 </a>
@@ -515,7 +539,10 @@ if ($paymentStatus === 'success' && $regId > 0 && Auth::check()) {
             `;
           }).join('');
         }
-      } catch (err) { console.error(err); }
+      } catch (err) {
+        console.error(err);
+        grid.innerHTML = '<div role="status">Unable to load passes. <button type="button" onclick="loadMyPasses()">Retry</button></div>';
+      } finally { grid.setAttribute('aria-busy', 'false'); }
     }
 
     function openModal(id) {
@@ -548,6 +575,7 @@ if ($paymentStatus === 'success' && $regId > 0 && Auth::check()) {
     function openJoinModal(sessionId) {
       currentSelectedSession = availableSessions.find(s => s.id == sessionId);
       if (!currentSelectedSession) return;
+      if (window.showOpenPlayJoin) { window.showOpenPlayJoin(currentSelectedSession); return; }
 
       if (parseInt(currentSelectedSession.is_user_registered || 0) > 0) {
         showAlreadyRegisteredModal(currentSelectedSession.title);
@@ -647,5 +675,13 @@ if ($paymentStatus === 'success' && $regId > 0 && Auth::check()) {
       })[m]);
     }
   </script>
+  <link rel="stylesheet" href="/pikvero/assets/css/open-play-mobile.css?v=<?= filemtime(__DIR__.'/../../assets/css/open-play-mobile.css') ?>">
+  <script src="/pikvero/assets/js/components/open-play-mobile.js?v=<?= filemtime(__DIR__.'/../../assets/js/components/open-play-mobile.js') ?>"></script>
+  <script src="/pikvero/assets/js/components/open-play-details.js?v=<?= filemtime(__DIR__.'/../../assets/js/components/open-play-details.js') ?>"></script>
+  <script>window.openPlayPlayer = <?= json_encode(['name'=>trim(($user['first_name']??'').' '.($user['last_name']??'')), 'email'=>$user['email']??''], JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;</script>
+  <script src="/pikvero/assets/js/components/open-play-join.js?v=<?= filemtime(__DIR__.'/../../assets/js/components/open-play-join.js') ?>"></script>
+  <script src="/pikvero/assets/js/components/open-play-payment.js?v=<?= filemtime(__DIR__.'/../../assets/js/components/open-play-payment.js') ?>"></script>
+  <script src="/pikvero/assets/js/vendor/qrcode.min.js"></script>
+  <script src="/pikvero/assets/js/components/open-play-pass.js?v=<?= filemtime(__DIR__.'/../../assets/js/components/open-play-pass.js') ?>"></script>
 </body>
 </html>

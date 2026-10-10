@@ -7,6 +7,7 @@ const SubscriptionAlertModal = {
   selectedPlanId: null,
   selectedCycle: 'monthly',
   selectedPaymentMethod: 'gcash',
+  lockedElements: new Map(),
 
   init() {
     if (document.getElementById('subscription-alert-modal')) return;
@@ -16,7 +17,7 @@ const SubscriptionAlertModal = {
         <div style="min-height:100%; display:flex; align-items:center; justify-content:center; padding:20px 0;">
           <div class="card-streetside" style="max-width:640px; width:100%; background:var(--white); padding:32px; position:relative; box-shadow:8px 8px 0 var(--ink); border:3px solid var(--ink); border-radius:18px;">
             
-            <button type="button" onclick="SubscriptionAlertModal.close()" style="position:absolute; top:18px; right:18px; background:none; border:none; font-size:1.8rem; cursor:pointer; color:var(--ink); font-weight:900; line-height:1;">&times;</button>
+            <button type="button" id="sam-close" aria-label="Close subscription notice" onclick="SubscriptionAlertModal.close()" style="position:absolute; top:18px; right:18px; background:none; border:none; font-size:1.8rem; cursor:pointer; color:var(--ink); font-weight:900; line-height:1;">&times;</button>
 
             <!-- Header Badge & Title -->
             <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap;">
@@ -69,6 +70,7 @@ const SubscriptionAlertModal = {
 
             <!-- Actions -->
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button type="button" class="button sand" onclick="SubscriptionChecker.refresh()">Check plan again</button>
               <button type="button" id="sam-btn-pay" onclick="SubscriptionAlertModal.submitPayMongo()" class="button coral" style="flex:1; padding:12px 18px; font-size:0.9rem; font-weight:900;">
                 <i class="bi bi-credit-card-fill"></i> PAY VIA PAYMONGO NOW
               </button>
@@ -83,6 +85,17 @@ const SubscriptionAlertModal = {
     `;
 
     document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = document.getElementById('subscription-alert-modal');
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'sam-title');
+    modal.addEventListener('keydown', event => {
+      if (event.key !== 'Tab') return;
+      const items = [...modal.querySelectorAll('button, a[href]')].filter(el => !el.disabled && el.getClientRects().length);
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    });
   },
 
   show(data) {
@@ -112,14 +125,27 @@ const SubscriptionAlertModal = {
     if (reason) {
       reason.textContent = data.action_reason || 'Please select a subscription plan to continue managing facilities, courts, and bookings.';
     }
+    document.getElementById('sam-close').hidden = Boolean(data.persistent);
+    document.getElementById('sam-btn-pay').disabled = Boolean(data.check_failed);
 
     this.renderPlans();
     modal.style.display = 'block';
+    if (data.persistent) {
+      [...document.body.children].forEach(el => {
+        if (el === modal || el.id === 'toast-container' || el.tagName === 'SCRIPT') return;
+        if (!this.lockedElements.has(el)) this.lockedElements.set(el, el.inert);
+        el.inert = true;
+      });
+      if (!modal.contains(document.activeElement)) modal.querySelector('button:not([hidden])')?.focus();
+    }
   },
 
   close() {
+    if (this.currentStatusData?.requires_action && this.currentStatusData?.persistent) return;
     const modal = document.getElementById('subscription-alert-modal');
     if (modal) modal.style.display = 'none';
+    this.lockedElements.forEach((inert, el) => { el.inert = inert; });
+    this.lockedElements.clear();
   },
 
   setCycle(cycle) {
@@ -159,7 +185,8 @@ const SubscriptionAlertModal = {
 
     container.innerHTML = plans.map(p => {
       const isSelected = (parseInt(p.id) === parseInt(this.selectedPlanId));
-      const price = (this.selectedCycle === 'yearly') ? parseFloat(p.yearly_price) : parseFloat(p.monthly_price);
+      const trialEligible = p.trial_eligible === true;
+      const price = trialEligible ? 0 : ((this.selectedCycle === 'yearly') ? (parseFloat(p.yearly_price) || Math.round(parseFloat(p.monthly_price) * 12 * .70 * 100) / 100) : parseFloat(p.monthly_price));
       
       return `
         <div onclick="SubscriptionAlertModal.selectPlan(${p.id})" style="cursor:pointer; border:3px solid ${isSelected ? 'var(--coral)' : 'var(--ink)'}; background:${isSelected ? '#fff5f3' : 'var(--white)'}; border-radius:12px; padding:14px; position:relative; box-shadow:${isSelected ? '4px 4px 0 var(--coral)' : '2px 2px 0 var(--ink)'}; transition:all 0.15s ease;">
@@ -179,7 +206,7 @@ const SubscriptionAlertModal = {
 
     const selPlan = plans.find(p => parseInt(p.id) === parseInt(this.selectedPlanId));
     if (selPlan) {
-      const finalPrice = (this.selectedCycle === 'yearly') ? parseFloat(selPlan.yearly_price) : parseFloat(selPlan.monthly_price);
+      const finalPrice = selPlan.trial_eligible === true ? 0 : ((this.selectedCycle === 'yearly') ? (parseFloat(selPlan.yearly_price) || Math.round(parseFloat(selPlan.monthly_price) * 12 * .70 * 100) / 100) : parseFloat(selPlan.monthly_price));
       const subtotalEl = document.getElementById('sam-inv-subtotal');
       const totalEl = document.getElementById('sam-inv-total');
       const planNameEl = document.getElementById('sam-inv-plan');
@@ -210,7 +237,7 @@ const SubscriptionAlertModal = {
         plan_id: this.selectedPlanId,
         plan_slug: selPlan ? selPlan.slug : 'starter',
         billing_cycle: this.selectedCycle,
-        redirect_url: window.location.href
+        redirect_url: window.location.origin + '/pikvero/public/owner/my-plan.php'
       };
 
       const res = await Api.post('/pikvero/api/payments/paymongo-checkout.php', payload);

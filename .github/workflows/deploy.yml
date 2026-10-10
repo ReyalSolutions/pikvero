@@ -28,6 +28,7 @@ jobs:
           local-dir: ./
           # The application URLs and asset paths use the /pikvero/ subdirectory.
           server-dir: /htdocs/pikvero/
+          log-level: verbose
           dangerous-clean-slate: false
           exclude: |
             **/.git*
@@ -36,6 +37,7 @@ jobs:
             **/.vscode/**
             **/.idea/**
             **/scratch/**
+            **/assets/images/uploads/logo_test_demo.png
             **/*firebase-adminsdk*.json
             **/storage/logs/**
             **/*.log

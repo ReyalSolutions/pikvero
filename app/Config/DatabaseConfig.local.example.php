@@ -4,7 +4,7 @@
  * 
  * Instructions:
  * 1. Copy or upload this file to InfinityFree inside:
- *    /htdocs/pikvero/app/Config/DatabaseConfig.local.php
+ *    /htdocs/app/Config/DatabaseConfig.local.php
  * 2. Fill in the MySQL details from your InfinityFree Control Panel.
  * 3. This file is git-ignored and will NEVER be overwritten by GitHub Actions deployments.
  */

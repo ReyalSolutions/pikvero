@@ -3,6 +3,12 @@ DirectoryIndex index.php index.html
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # Root hosting layout: serve legacy /pikvero/ links from this project root.
+    # Match extensionless PHP routes directly before the internal-rewrite guard.
+    RewriteCond %{DOCUMENT_ROOT}/$1.php -f
+    RewriteRule ^pikvero/(.*?)/?$ $1.php [L,QSA]
+    RewriteRule ^pikvero/(.*)$ $1 [L,QSA]
+
     # Prevent redirect loops for internal rewrites
     RewriteCond %{ENV:REDIRECT_STATUS} 200
     RewriteRule ^ - [L]

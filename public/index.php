@@ -850,8 +850,9 @@ $popularCities = $facilityRepo->getPopularCities(6);
       }
     }
   </style>
-<link rel="manifest" href="/pikvero/manifest.webmanifest">
+<link rel="manifest" href="/pikvero/public/manifest.php">
 <meta name="theme-color" content="#003d2d">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pikvero">
 <link rel="apple-touch-icon" href="/pikvero/assets/images/pwa/icon-180.png">

@@ -950,8 +950,9 @@ if (empty($availableCities)) {
   <link rel="stylesheet" href="<?= $basePath ?>/assets/css/streetside-theme.css?v=<?= filemtime(__DIR__ . '/../assets/css/streetside-theme.css') ?>">
   <link rel="stylesheet" href="<?= $basePath ?>/assets/css/player-pages.css?v=1">
   <?php endif; ?>
-<link rel="manifest" href="/pikvero/manifest.webmanifest">
+<link rel="manifest" href="/pikvero/public/manifest.php">
 <meta name="theme-color" content="#003d2d">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pikvero">
 <link rel="apple-touch-icon" href="/pikvero/assets/images/pwa/icon-180.png">

@@ -1,0 +1,2 @@
+'Hello Fullname,<br/><br/>
+This is a confirmation that we have received your application. You have applied for the Job Position - '. $_POST['fullname'] .' The last date of application is [last date of application] after which we will start going through all applications. We will let all applicants know if they are put through to the interviewing round or not. More information about our recruitment process is available at this page [link to career page]. Thank you for your application, and have a nice day.'

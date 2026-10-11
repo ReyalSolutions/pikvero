@@ -22,13 +22,12 @@ function homeLink($type,$city){return '/pikvero/public/customer/dashboard.php?'.
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="/pikvero/assets/css/streetside-theme.css?v=<?= filemtime(__DIR__.'/../../assets/css/streetside-theme.css') ?>">
 <link rel="stylesheet" href="/pikvero/assets/css/player-home.css?v=<?= filemtime(__DIR__.'/../../assets/css/player-home.css') ?>">
-<link rel="manifest" href="/pikvero/manifest.webmanifest">
 <meta name="theme-color" content="#003d2d">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pikvero">
 <link rel="apple-touch-icon" href="/pikvero/assets/images/pwa/icon-180.png">
-<script defer src="/pikvero/assets/js/components/pwa.js?v=20261010"></script>
+<script defer src="/pikvero/assets/js/components/pwa.js?v=20261011-shortcut"></script>
 </head><body class="customer-portal player-home">
 <header class="home-top"><div class="home-location-row"><form method="get" id="home-location-form"><i class="bi bi-geo-alt"></i><input type="hidden" name="court_type" value="<?= homeEsc($type) ?>"><label class="sr-only" for="home-city">Court location</label><select id="home-city" name="city" onchange="this.form.submit()"><option value="">All locations</option><?php foreach($cities as $c): $name=is_array($c)?($c['city'] ?? ''):$c; ?><option value="<?= homeEsc($name) ?>" <?= $city===$name?'selected':'' ?>><?= homeEsc($name) ?></option><?php endforeach; ?></select></form><a class="home-bell" href="/pikvero/public/notifications.php" aria-label="Your notifications"><i class="bi bi-bell"></i></a></div>
 <form action="/pikvero/public/customer/search.php" class="home-search"><div><i class="bi bi-search"></i><label class="sr-only" for="home-query">Search courts or facilities</label><input id="home-query" name="q" placeholder="Search courts, locations, or facilities…"><input type="hidden" name="city" value="<?= homeEsc($city) ?>"><button type="submit" class="sr-only">Search</button></div><a href="/pikvero/public/customer/search.php?<?= homeEsc(http_build_query(['city'=>$city])) ?>" aria-label="Search and filter courts"><i class="bi bi-sliders"></i></a></form></header>

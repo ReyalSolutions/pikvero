@@ -36,13 +36,12 @@ function esc($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Edit Profile — Pikvero</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="/pikvero/assets/css/streetside-theme.css?v=<?= filemtime(__DIR__.'/../../assets/css/streetside-theme.css') ?>">
-<link rel="stylesheet" href="/pikvero/assets/css/player-profile.css?v=<?= filemtime(__DIR__.'/../../assets/css/player-profile.css') ?>"><link rel="manifest" href="/pikvero/manifest.webmanifest">
-<meta name="theme-color" content="#003d2d">
+<link rel="stylesheet" href="/pikvero/assets/css/player-profile.css?v=<?= filemtime(__DIR__.'/../../assets/css/player-profile.css') ?>"><meta name="theme-color" content="#003d2d">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pikvero">
 <link rel="apple-touch-icon" href="/pikvero/assets/images/pwa/icon-180.png">
-<script defer src="/pikvero/assets/js/components/pwa.js?v=20261010"></script>
+<script defer src="/pikvero/assets/js/components/pwa.js?v=20261011-shortcut"></script>
 </head>
 <body class="customer-portal profile-edit"><header class="edit-profile-header"><a href="/pikvero/public/customer/profile.php" aria-label="Back to profile"><i class="bi bi-chevron-left"></i></a><strong>Edit Profile</strong><span></span></header>
 <main class="profile-edit-main"><form method="post" enctype="multipart/form-data"><input type="hidden" name="csrf" value="<?= esc($_SESSION['profile_csrf']) ?>">

@@ -850,13 +850,12 @@ $popularCities = $facilityRepo->getPopularCities(6);
       }
     }
   </style>
-<link rel="manifest" href="/pikvero/manifest.webmanifest">
 <meta name="theme-color" content="#003d2d">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pikvero">
 <link rel="apple-touch-icon" href="/pikvero/assets/images/pwa/icon-180.png">
-<script defer src="/pikvero/assets/js/components/pwa.js?v=20261010"></script>
+<script defer src="/pikvero/assets/js/components/pwa.js?v=20261011-shortcut"></script>
 </head>
 <body>
 

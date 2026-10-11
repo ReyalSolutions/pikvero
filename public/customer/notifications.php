@@ -10,13 +10,12 @@ if (empty($_SESSION['profile_csrf'])) $_SESSION['profile_csrf']=bin2hex(random_b
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="/pikvero/assets/css/streetside-theme.css?v=<?= filemtime(__DIR__.'/../../assets/css/streetside-theme.css') ?>">
 <link rel="stylesheet" href="/pikvero/assets/css/toast.css?v=<?= filemtime(__DIR__.'/../../assets/css/toast.css') ?>">
-<link rel="stylesheet" href="/pikvero/assets/css/inbox.css?v=<?= filemtime(__DIR__.'/../../assets/css/inbox.css') ?>"><link rel="manifest" href="/pikvero/manifest.webmanifest">
-<meta name="theme-color" content="#003d2d">
+<link rel="stylesheet" href="/pikvero/assets/css/inbox.css?v=<?= filemtime(__DIR__.'/../../assets/css/inbox.css') ?>"><meta name="theme-color" content="#003d2d">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pikvero">
 <link rel="apple-touch-icon" href="/pikvero/assets/images/pwa/icon-180.png">
-<script defer src="/pikvero/assets/js/components/pwa.js?v=20261010"></script>
+<script defer src="/pikvero/assets/js/components/pwa.js?v=20261011-shortcut"></script>
 </head><body class="<?= $isPlayerInbox ? 'customer-portal ' : '' ?>inbox-page">
 <header class="inbox-header"><a href="<?= htmlspecialchars($inboxBack) ?>" aria-label="Back to your portal"><i class="bi bi-chevron-left"></i></a><h1>Notifications</h1></header><main class="inbox-main">
 <div class="inbox-tabs" role="group" aria-label="Inbox view"><button data-view="notifications" aria-pressed="true">Updates</button><button data-view="announcements" aria-pressed="false">Announcements</button></div>

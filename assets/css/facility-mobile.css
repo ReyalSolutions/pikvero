@@ -91,6 +91,11 @@
  .facility-schedule-view .facility-slot-period{display:block;grid-column:1/-1;font-family:inherit;font-size:.8rem;margin:7px 0 0;font-weight:800}
  .facility-schedule-view .slot-btn{min-height:36px!important;padding:7px 3px!important;border-radius:9px!important;background:#eaf5ef!important}
  .facility-schedule-view .slot-btn strong{font-family:inherit;font-size:.72rem!important;font-weight:600}
+ .facility-schedule-view .slot-btn.booked{background:#ffe8e9!important;color:#bb444b!important;cursor:not-allowed;opacity:1}
+ .facility-mobile .slot-btn.open-play-closed>span{display:block!important;font-size:.62rem!important;line-height:1.3;margin-top:3px}
+ .facility-schedule-view .slot-btn.open-play-closed{background:#fff0db!important;color:#915b14!important}
+ .facility-schedule-view .facility-slot-legend{flex-wrap:wrap;row-gap:6px}
+ .facility-schedule-view .facility-slot-legend .facility-open-play-legend{color:#915b14}
  .facility-schedule-view .slot-btn.selected-slot{background:#006b35!important}
  .facility-schedule-view .facility-duration{margin-top:26px}
  .facility-schedule-view .facility-duration button{min-height:43px;font-size:.75rem}

@@ -24,8 +24,9 @@ if ($action === 'pass') {
     if (!$isLoggedIn) { Response::unauthorized('Please sign in to view your pass.'); exit; }
     $id = (int)$request->get('id', 0);
     $sessionId = (int)$request->get('session_id', 0);
-    $pass = $db->selectOne("SELECT r.*, s.title AS session_title, s.session_date, s.start_time, s.end_time, s.status AS session_status, f.name AS facility_name
+    $pass = $db->selectOne("SELECT r.*, s.title AS session_title, s.session_date, s.start_time, s.end_time, s.status AS session_status, f.name AS facility_name, s.court_id, c.name AS court_name
         FROM open_play_registrations r JOIN open_play_sessions s ON s.id=r.session_id JOIN facilities f ON f.id=s.facility_id
+        LEFT JOIN courts c ON c.id=s.court_id
         WHERE r.user_id=? AND " . ($id > 0 ? 'r.id=?' : 'r.session_id=?') . ' ORDER BY r.id DESC LIMIT 1', [$userId, $id > 0 ? $id : $sessionId], 'ii');
     if (!$pass) { Response::error('Pass not found.'); exit; }
     $today = (new DateTimeImmutable('now', new DateTimeZone('Asia/Manila')))->format('Y-m-d');
@@ -35,10 +36,10 @@ if ($action === 'pass') {
 }
 
 if ($action === 'detail') {
-    $session = $db->selectOne("SELECT s.*, f.name AS facility_name, f.city,
+    $session = $db->selectOne("SELECT s.*, f.name AS facility_name, f.city, c.name AS court_name,
         (SELECT COUNT(*) FROM open_play_registrations r WHERE r.session_id=s.id AND r.payment_status!='refunded') AS registered_players,
         (SELECT COUNT(*) FROM open_play_registrations r WHERE r.session_id=s.id AND r.user_id=? AND r.payment_status!='refunded') AS is_user_registered
-        FROM open_play_sessions s JOIN facilities f ON f.id=s.facility_id WHERE s.id=?", [$userId, (int)$request->get('id', 0)], 'ii');
+        FROM open_play_sessions s JOIN facilities f ON f.id=s.facility_id LEFT JOIN courts c ON c.id=s.court_id WHERE s.id=?", [$userId, (int)$request->get('id', 0)], 'ii');
     if (!$session) { Response::error('Session not found'); exit; }
     $session['photos'] = $db->select('SELECT image_path FROM facility_images WHERE facility_id=? ORDER BY is_primary DESC,id', [(int)$session['facility_id']], 'i');
     $session['attendees'] = $isLoggedIn && (int)$session['is_user_registered'] > 0
@@ -256,10 +257,11 @@ if ($action === 'my_passes') {
     }
     $passes = $db->select("
         SELECT r.*, s.title AS session_title, s.session_date, s.start_time, s.end_time,
-               f.name AS facility_name, f.city
+               f.name AS facility_name, f.city, s.court_id, c.name AS court_name
         FROM open_play_registrations r
         JOIN open_play_sessions s ON r.session_id = s.id
         JOIN facilities f ON s.facility_id = f.id
+        LEFT JOIN courts c ON c.id = s.court_id
         WHERE r.user_id = ?
         ORDER BY r.id DESC
     ", [$userId], 'i');
@@ -275,12 +277,13 @@ if ($action === 'my_passes') {
 
 // Default: List available open play sessions
 $sessions = $db->select("
-    SELECT s.*, f.name AS facility_name, f.city,
+    SELECT s.*, f.name AS facility_name, f.city, c.name AS court_name,
            (SELECT fi.image_path FROM facility_images fi WHERE fi.facility_id=f.id ORDER BY fi.is_primary DESC,fi.id LIMIT 1) AS facility_image,
            (SELECT COUNT(*) FROM open_play_registrations r WHERE r.session_id = s.id AND r.payment_status != 'refunded') AS registered_players,
            (SELECT COUNT(*) FROM open_play_registrations r WHERE r.session_id = s.id AND r.user_id = ? AND r.payment_status != 'refunded') AS is_user_registered
     FROM open_play_sessions s
     JOIN facilities f ON s.facility_id = f.id
+    LEFT JOIN courts c ON c.id = s.court_id
     WHERE s.session_date >= CURDATE() AND s.status != 'cancelled'
     ORDER BY s.session_date ASC, s.start_time ASC
 ", [$userId], 'i');

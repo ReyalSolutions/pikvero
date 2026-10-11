@@ -10,7 +10,7 @@ if (empty($_SESSION['profile_csrf'])) $_SESSION['profile_csrf']=bin2hex(random_b
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="/pikvero/assets/css/streetside-theme.css?v=<?= filemtime(__DIR__.'/../../assets/css/streetside-theme.css') ?>">
 <link rel="stylesheet" href="/pikvero/assets/css/toast.css?v=<?= filemtime(__DIR__.'/../../assets/css/toast.css') ?>">
-<link rel="stylesheet" href="/pikvero/assets/css/inbox.css?v=<?= filemtime(__DIR__.'/../../assets/css/inbox.css') ?>"><link rel="manifest" href="/pikvero/public/manifest.php">
+<link rel="stylesheet" href="/pikvero/assets/css/inbox.css?v=<?= filemtime(__DIR__.'/../../assets/css/inbox.css') ?>"><link rel="manifest" href="/pikvero/manifest.webmanifest">
 <meta name="theme-color" content="#003d2d">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">

@@ -15,6 +15,9 @@ const Api = {
       credentials: 'same-origin',
       headers: { ...defaultHeaders, ...(options.headers || {}) }
     };
+    if (config.method !== 'GET' && typeof AuthHelper !== 'undefined' && AuthHelper.currentUser?.csrf_token) {
+      config.headers['X-CSRF-Token'] = AuthHelper.currentUser.csrf_token;
+    }
 
     if (options.data) {
       if (options.data instanceof FormData) {

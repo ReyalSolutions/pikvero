@@ -725,7 +725,7 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
             <div id="fb-orgname" class="inline-feedback"></div>
           </div>
           <div class="form-group-modern">
-            <label class="form-label-modern" for="ob-taxid">BUSINESS PERMIT / DTI / SEC REGISTRATION # *</label>
+            <label class="form-label-modern" for="ob-taxid">BUSINESS PERMIT / DTI / SEC REGISTRATION # (OPTIONAL)</label>
             <input type="text" id="ob-taxid" class="input-modern" placeholder="DTI-2026-998877">
             <div id="fb-taxid" class="inline-feedback"></div>
           </div>
@@ -766,15 +766,15 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
           <section class="onboarding-section">
 <div class="step-title-header">
             <i class="bi bi-file-earmark-text"></i>
-            <span>VERIFICATION DOCUMENTS</span>
+            <span>VERIFICATION DOCUMENTS (OPTIONAL)</span>
           </div>
 
           <div class="dropzone-box" onclick="document.getElementById('ob-docs').click()">
             <i class="bi bi-cloud-arrow-up-fill" style="font-size:2.8rem; color:#15803d;"></i>
             <div style="font-family:'DM Mono', monospace; font-size:0.9rem; font-weight:900; margin-top:10px; color:#0c1a15;">
-              Upload Business Permit or Government Valid ID
+              Upload Business Permit or Government Valid ID (Optional)
             </div>
-            <p style="font-size:0.85rem; color:#334155; font-weight:600; margin:4px 0 14px;">Accepted formats: PDF, PNG, JPG (Max 5MB)</p>
+            <p style="font-size:0.85rem; color:#334155; font-weight:600; margin:4px 0 14px;">You can continue without uploading a document. Accepted formats: PDF, PNG, JPG (Max 5MB)</p>
             <input type="file" id="ob-docs" accept=".pdf,.png,.jpg,.jpeg" style="display:none;">
             <button type="button" class="btn-reset-draft" style="background:#ffffff; margin:0 auto;">
               <i class="bi bi-folder2-open"></i> Browse Files
@@ -847,6 +847,11 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
         <!-- STEP 5: Plan & Payment -->
         <div class="wizard-step" id="step-5">
           <section class="onboarding-section">
+            <div style="margin-bottom:18px;">
+              <label class="form-label-modern" for="ob-referral-code">REFERRAL CODE (OPTIONAL)</label>
+              <input type="text" id="ob-referral-code" class="input-modern" maxlength="24" placeholder="Enter the code of the person who referred you">
+              <small>Your referrer receives a ₱150 cash bonus after your paid package purchase is verified.</small>
+            </div>
 <div class="step-title-header">
             <i class="bi bi-award-fill"></i>
             <span>CHOOSE SAAS SUBSCRIPTION</span>
@@ -1165,6 +1170,9 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
       });
 
       restoreFromLocalStorage();
+      const referralParams = new URLSearchParams(location.search);
+      const sharedReferral = referralParams.get('referral') || (/^PK[0-9A-F]{12}$/i.test(referralParams.get('ref') || '') ? referralParams.get('ref') : '');
+      if (sharedReferral) document.getElementById('ob-referral-code').value = sharedReferral.toUpperCase();
 
       // Check for PayMongo return callback URL parameters
       const urlParams = new URLSearchParams(window.location.search);
@@ -1274,6 +1282,7 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
           price: document.getElementById('ob-price')?.value || '',
           opentime: document.getElementById('ob-opentime')?.value || '',
           closetime: document.getElementById('ob-closetime')?.value || '',
+          referral_code: document.getElementById('ob-referral-code').value.trim().toUpperCase(),
           subplan: document.querySelector('input[name="sub_plan"]:checked')?.value || 'starter',
           paymethod: document.getElementById('ob-paymethod')?.value || '',
           paymentData: activePaymentData,
@@ -1452,6 +1461,12 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
       const el = document.getElementById('ob-taxid');
       const fb = document.getElementById('fb-taxid');
       const val = el.value.trim();
+      if (!val) {
+        el.classList.remove('is-valid', 'is-invalid');
+        fb.className = 'inline-feedback';
+        fb.innerText = '';
+        return true;
+      }
       const formatOk = /^[a-zA-Z0-9\-\/]{3,50}$/.test(val);
       if (!formatOk) {
         setFeedback(el, fb, false, '✕ Enter a valid Registration # (min 3 chars, letters/numbers/hyphens).');
@@ -1769,6 +1784,7 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
         price: document.getElementById('ob-price')?.value || '',
         opentime: document.getElementById('ob-opentime')?.value || '',
         closetime: document.getElementById('ob-closetime')?.value || '',
+        referral_code: document.getElementById('ob-referral-code').value.trim().toUpperCase(),
         subplan: document.querySelector('input[name="sub_plan"]:checked')?.value || 'starter',
         paymethod: document.getElementById('ob-paymethod')?.value || '',
         paymentData: activePaymentData,
@@ -1789,6 +1805,9 @@ $favLogo = class_exists(\App\Core\Auth\Auth::class) ? \App\Core\Auth\Auth::getLo
         if (data.lname) document.getElementById('ob-lname').value = data.lname;
         if (data.email) document.getElementById('ob-email').value = data.email;
         if (data.phone) document.getElementById('ob-phone').value = data.phone;
+        const params = new URLSearchParams(location.search);
+        const referralCode = params.get('referral') || (/^PK[0-9A-F]{12}$/i.test(params.get('ref') || '') ? params.get('ref') : '') || data.referral_code || '';
+        document.getElementById('ob-referral-code').value = referralCode.toUpperCase();
         if (data.pass) document.getElementById('ob-pass').value = data.pass;
         if (data.cpass) document.getElementById('ob-cpass').value = data.cpass;
         if (data.orgname) document.getElementById('ob-orgname').value = data.orgname;

@@ -11,6 +11,7 @@ $db->execute("
     CREATE TABLE IF NOT EXISTS open_play_sessions (
         id INT AUTO_INCREMENT PRIMARY KEY,
         facility_id INT NOT NULL,
+        court_id INT NULL,
         title VARCHAR(100) NOT NULL,
         session_date DATE NOT NULL,
         start_time TIME NOT NULL,
@@ -21,6 +22,7 @@ $db->execute("
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX (facility_id),
+        INDEX idx_open_play_court_date (court_id, session_date, status),
         INDEX (session_date),
         INDEX (status)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

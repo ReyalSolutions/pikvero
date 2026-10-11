@@ -5,6 +5,7 @@ use App\Infrastructure\Repositories\OpenPlayRepository;
 use App\Core\Http\Request;
 use App\Core\Http\Response;
 use App\Core\Auth\Auth;
+use App\Core\Database\Connection;
 use Exception;
 
 class OpenPlayController {
@@ -59,11 +60,12 @@ class OpenPlayController {
         Auth::requirePermission('open_play.create');
 
         $data = $request->all();
-        if (empty($data['facility_id']) || empty($data['title']) || empty($data['session_date']) || empty($data['start_time']) || empty($data['end_time'])) {
-            Response::error('Facility, title, session date, and start/end operating times are required.');
+        if (empty($data['facility_id']) || empty($data['court_id']) || empty($data['title']) || empty($data['session_date']) || empty($data['start_time']) || empty($data['end_time'])) {
+            Response::error('Facility, court, title, session date, and start/end operating times are required.');
         }
 
         try {
+            $this->validateFacilityAccess((int)$data['facility_id']);
             $id = $this->repo->createSession($data);
             Response::success('Open Play session created successfully.', ['id' => $id]);
         } catch (Exception $e) {
@@ -76,15 +78,27 @@ class OpenPlayController {
 
         $id = (int)$request->get('id');
         $data = $request->all();
-        if ($id <= 0 || empty($data['title']) || empty($data['session_date'])) {
-            Response::error('Session ID, title, and session date are required.');
+        if ($id <= 0 || empty($data['facility_id']) || empty($data['court_id']) || empty($data['title']) || empty($data['session_date'])) {
+            Response::error('Session ID, facility, court, title, and session date are required.');
         }
 
         try {
+            $existing = $this->repo->getSessionById($id);
+            if (!$existing) throw new Exception('Session not found.');
+            $this->validateFacilityAccess((int)$existing['facility_id']);
+            $this->validateFacilityAccess((int)$data['facility_id']);
             $this->repo->updateSession($id, $data);
             Response::success('Open Play session updated successfully.');
         } catch (Exception $e) {
             Response::error($e->getMessage());
+        }
+    }
+
+    private function validateFacilityAccess(int $facilityId): void {
+        $facility = Connection::getInstance()->selectOne('SELECT organization_id FROM facilities WHERE id = ?', [$facilityId], 'i');
+        if (!$facility || (!in_array(Auth::role(), ['super_admin', 'platform_admin'], true)
+            && (!Auth::organizationId() || (int)$facility['organization_id'] !== (int)Auth::organizationId()))) {
+            throw new Exception('You do not have access to the selected facility.');
         }
     }
 

@@ -3,6 +3,7 @@ require_once __DIR__ . '/../../app/bootstrap.php';
 
 use App\Core\Auth\Auth;
 use App\Infrastructure\Repositories\FacilityRepository;
+use App\Infrastructure\Repositories\CourtRepository;
 
 Auth::requirePermission('open_play.view');
 $canCreate = Auth::can('open_play.create');
@@ -20,6 +21,15 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
     $orgId = Auth::organizationId();
     if ($orgId) {
         $facilities = $facilityRepo->findByOrganizationId($orgId);
+    }
+}
+$sessionCourts = [];
+$courtRepo = new CourtRepository();
+foreach ($facilities as $facility) {
+    foreach ($courtRepo->findByFacilityId((int)$facility['id']) as $court) {
+        if ($court['status'] === 'active') {
+            $sessionCourts[] = ['id' => (int)$court['id'], 'facility_id' => (int)$facility['id'], 'name' => $court['name']];
+        }
     }
 }
 ?>
@@ -199,12 +209,20 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
 
         <div style="margin-bottom:14px;">
           <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">TARGET FACILITY *</label>
-          <select id="session-facility-id" required style="width:100%; padding:9px 12px; border:2px solid var(--ink); border-radius:8px; font-weight:800; font-family:inherit;">
+          <select id="session-facility-id" onchange="populateSessionCourts()" required style="width:100%; padding:9px 12px; border:2px solid var(--ink); border-radius:8px; font-weight:800; font-family:inherit;">
             <option value="">-- Choose Facility --</option>
             <?php foreach ($facilities as $fac): ?>
               <option value="<?= $fac['id'] ?>"><?= htmlspecialchars($fac['name']) ?> (<?= htmlspecialchars($fac['city'] ?? 'Bohol') ?>)</option>
             <?php endforeach; ?>
           </select>
+        </div>
+
+        <div style="margin-bottom:14px;">
+          <label for="session-court-id" class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">TARGET COURT *</label>
+          <select id="session-court-id" required style="width:100%; padding:9px 12px; border:2px solid var(--ink); border-radius:8px; font-weight:800; font-family:inherit;">
+            <option value="">-- Choose Facility First --</option>
+          </select>
+          <div style="font-size:0.75rem; margin-top:4px;">This court will be closed for bookings during the session.</div>
         </div>
 
         <div style="margin-bottom:14px;">
@@ -385,6 +403,7 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
                   <span class="mono" style="font-size:0.72rem; color:var(--green); font-weight:800;">#OP-${row.id}</span>
                   <div style="font-weight:800; font-size:0.95rem; text-transform:uppercase;">${data}</div>
                   <div style="font-size:0.78rem; color:#4a5c56;"><i class="bi bi-building"></i> ${row.facility_name || 'Facility'} (${row.city || 'Bohol'})</div>
+                  <div style="font-size:0.75rem;">${$('<span>').text(row.court_name || 'Court assignment required').html()}</div>
                 </div>
               `;
             }
@@ -487,9 +506,21 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
       }
     }
 
+    const sessionCourts = <?= json_encode($sessionCourts, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+
+    function populateSessionCourts(selectedCourtId = '') {
+      const facilityId = document.getElementById('session-facility-id').value;
+      const select = document.getElementById('session-court-id');
+      const courts = sessionCourts.filter(court => String(court.facility_id) === facilityId);
+      select.replaceChildren(new Option(courts.length ? '-- Choose Court --' : '-- No Active Courts --', ''));
+      courts.forEach(court => select.add(new Option(court.name, court.id)));
+      select.value = selectedCourtId ? String(selectedCourtId) : '';
+    }
+
     function openCreateSessionModal() {
       document.getElementById('session-modal-title').innerHTML = `<i class="bi bi-dribbble"></i> CREATE OPEN PLAY SESSION`;
       document.getElementById('session-id').value = '';
+      populateSessionCourts();
       document.getElementById('session-title').value = '';
       const today = new Date().toISOString().split('T')[0];
       document.getElementById('session-date').value = today;
@@ -509,6 +540,7 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
           document.getElementById('session-modal-title').innerHTML = `<i class="bi bi-pencil-square"></i> EDIT OPEN PLAY SESSION`;
           document.getElementById('session-id').value = s.id;
           document.getElementById('session-facility-id').value = s.facility_id;
+          populateSessionCourts(s.court_id);
           document.getElementById('session-title').value = s.title;
           document.getElementById('session-date').value = s.session_date;
           document.getElementById('session-fee').value = s.fee_per_player;
@@ -529,6 +561,7 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
       const payload = {
         id: id,
         facility_id: document.getElementById('session-facility-id').value,
+        court_id: document.getElementById('session-court-id').value,
         title: document.getElementById('session-title').value.trim(),
         session_date: document.getElementById('session-date').value,
         fee_per_player: document.getElementById('session-fee').value,
@@ -537,6 +570,15 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
         max_players: document.getElementById('session-max-players').value,
         status: document.getElementById('session-status').value
       };
+
+      if (!payload.court_id) {
+        Toast.error('Court Required', 'Please select a court for this Open Play session.');
+        return;
+      }
+      if (payload.start_time >= payload.end_time) {
+        Toast.error('Invalid Time', 'End time must be after start time.');
+        return;
+      }
 
       try {
         const res = await Api.post('/pikvero/api/admin/open-play.php?action=' + action, payload);

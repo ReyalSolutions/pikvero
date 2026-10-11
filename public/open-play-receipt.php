@@ -15,10 +15,11 @@ if (!$regId) {
 
 $db = Connection::getInstance();
 $sql = "SELECT r.*, s.title AS session_title, s.session_date, s.start_time, s.end_time, s.fee_per_player,
-               f.name AS facility_name, f.address AS facility_address, f.city AS facility_city
+               f.name AS facility_name, f.address AS facility_address, f.city AS facility_city, c.name AS court_name
         FROM open_play_registrations r
         JOIN open_play_sessions s ON r.session_id = s.id
         JOIN facilities f ON s.facility_id = f.id
+        LEFT JOIN courts c ON c.id = s.court_id
         WHERE r.id = ? LIMIT 1";
 
 $d = $db->selectOne($sql, [$regId], 'i');
@@ -247,6 +248,10 @@ if ($from === 'admin_bookings' || $from === 'bookings') {
     <div class="info-row">
       <span>DATE:</span>
       <span><?= date('M d, Y', strtotime($d['session_date'])) ?></span>
+    </div>
+    <div class="info-row">
+      <span>COURT:</span>
+      <span><?= htmlspecialchars($d['court_name'] ?? 'Not assigned') ?></span>
     </div>
     <div class="info-row">
       <span>OPERATING TIME:</span>

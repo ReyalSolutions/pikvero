@@ -94,7 +94,7 @@ $profileInitials = strtoupper(substr($profileUser['first_name'] ?? '', 0, 1) . s
     }
   </style>
 <link rel="stylesheet" href="/pikvero/assets/css/player-profile.css?v=<?= filemtime(__DIR__ . '/../../assets/css/player-profile.css') ?>">
-<link rel="manifest" href="/pikvero/public/manifest.php">
+<link rel="manifest" href="/pikvero/manifest.webmanifest">
 <meta name="theme-color" content="#003d2d">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -126,6 +126,7 @@ $profileInitials = strtoupper(substr($profileUser['first_name'] ?? '', 0, 1) . s
       <div class="profile-shortcuts">
         <a href="/pikvero/public/customer/bookings.php"><i class="bi bi-calendar-check"></i><span><strong>My bookings</strong><small>View and manage your reservations</small></span><i class="bi bi-chevron-right"></i></a>
         <a href="/pikvero/public/customer/open-play.php"><i class="bi bi-ticket-perforated"></i><span><strong>Open play passes</strong><small>Your sessions and entry passes</small></span><i class="bi bi-chevron-right"></i></a>
+        <a href="/pikvero/public/customer/referrals.php"><i class="bi bi-gift"></i><span><strong>Referral bonuses</strong><small>Refer an owner, earn ₱150 and claim your bonus</small></span><i class="bi bi-chevron-right"></i></a>
       </div>
       <div class="profile-shortcuts">
         <a href="/pikvero/public/customer/edit-profile.php"><i class="bi bi-person"></i><span><strong>Personal information</strong><small>Your contact and account details</small></span><i class="bi bi-chevron-right"></i></a>

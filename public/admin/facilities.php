@@ -371,13 +371,15 @@ require_once __DIR__ . '/../../includes/head.php';
           });
 
           if (res.success) {
-            Toast.success('Created', 'Facility added successfully.');
             document.getElementById('create-facility-modal').style.display = 'none';
+            document.getElementById('create-facility-modal').classList.remove('active');
             resetCreateForm();
+            Toast.success('Facility Created', res.message || 'Facility added successfully.');
             loadFacilities();
             checkSubscriptionLimits();
           } else if (res && (res.code === 'PLAN_LIMIT_REACHED' || (res.message && res.message.includes('limit reached')))) {
             document.getElementById('create-facility-modal').style.display = 'none';
+            document.getElementById('create-facility-modal').classList.remove('active');
             openUpgradePlanModal(res.message);
           } else {
             Toast.error('Creation Failed', (res && res.message) ? res.message : 'Could not add facility.');
@@ -415,6 +417,7 @@ require_once __DIR__ . '/../../includes/head.php';
           if (res.success) {
             Toast.success('Facility Updated', res.message);
             document.getElementById('edit-facility-modal').style.display = 'none';
+            document.getElementById('edit-facility-modal').classList.remove('active');
             loadFacilities();
           }
         } catch (err) { console.error(err); }

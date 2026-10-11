@@ -48,6 +48,10 @@ class AvailabilityEngine {
 
         $activeBookings    = $this->bookingRepo->getActiveBookingsForCourtDate($courtId, $date);
         $blockedSchedules  = $this->courtRepo->getBlockedSchedules($courtId, $date);
+        $openPlaySessions = $db->select(
+            "SELECT start_time, end_time FROM open_play_sessions WHERE court_id = ? AND session_date = ? AND status IN ('open', 'full')",
+            [$courtId, $date], 'is'
+        );
 
         $slots = [];
         for ($h = $startHour; $h < $endHour; $h++) {
@@ -94,7 +98,14 @@ class AvailabilityEngine {
                 }
             }
 
-            $available = !$isBooked && !$isBlocked;
+            $isOpenPlay = false;
+            foreach ($openPlaySessions as $session) {
+                if ($slotStart < $session['end_time'] && $slotEnd > $session['start_time']) {
+                    $isOpenPlay = true;
+                    break;
+                }
+            }
+            $available = !$isBooked && !$isBlocked && !$isOpenPlay;
 
             $slots[] = [
                 'start_time'    => sprintf('%02d:00', $h),
@@ -104,8 +115,8 @@ class AvailabilityEngine {
                 'formatted'     => $this->to12h($h) . ' - ' . $this->to12h($h + 1),
                 'price'         => $slotPrice,
                 'available'     => $available,
-                'status'        => $isBooked ? 'booked' : ($isBlocked ? 'blocked' : 'available'),
-                'reason'        => $blockReason,
+                'status'        => $isOpenPlay ? 'open_play' : ($isBooked ? 'booked' : ($isBlocked ? 'blocked' : 'available')),
+                'reason'        => $isOpenPlay ? 'Closed for Open Play' : $blockReason,
             ];
         }
 
@@ -119,6 +130,14 @@ class AvailabilityEngine {
         }
         if ($court['status'] !== 'active') {
             throw new Exception("Selected court is currently unavailable or under maintenance.");
+        }
+
+        $openPlay = Connection::getInstance()->selectOne(
+            "SELECT id FROM open_play_sessions WHERE court_id = ? AND session_date = ? AND status IN ('open', 'full') AND start_time < ? AND end_time > ? LIMIT 1",
+            [$courtId, $date, $endTime, $startTime], 'isss'
+        );
+        if ($openPlay) {
+            throw new Exception("This court is closed for Open Play during the selected time. Please select another slot.");
         }
 
         // Prevent Double Booking

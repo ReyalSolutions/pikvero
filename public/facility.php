@@ -438,7 +438,7 @@
     }
   </style>
 <link rel="stylesheet" href="/pikvero/assets/css/facility-mobile.css?v=<?= filemtime(__DIR__.'/../assets/css/facility-mobile.css') ?>">
-<link rel="manifest" href="/pikvero/public/manifest.php">
+<link rel="manifest" href="/pikvero/manifest.webmanifest">
 <meta name="theme-color" content="#003d2d">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1106,6 +1106,13 @@
             return;
           }
 
+          var availableKeys = new Set(slots.filter(function(slot) { return slot.available; }).map(function(slot) {
+            return String(slot.start_time).substring(0, 5) + '-' + String(slot.end_time).substring(0, 5);
+          }));
+          Object.keys(selectedSlotsMap).forEach(function(key) {
+            if (!availableKeys.has(key)) delete selectedSlotsMap[key];
+          });
+
           var html = $.map(slots, function(slot) {
             var price = parseFloat(slot.price || slot.price_per_hour || 350).toFixed(2);
             var rawStart = String(slot.start_time).substring(0, 5);
@@ -1126,9 +1133,11 @@
                 + '<span style="font-size:0.68rem;opacity:0.85;">' + (isSelected ? '✓ ' : '') + '&#8369;' + price + '</span>'
                 + '</button>';
             } else {
-              return '<button disabled data-slot-start="' + displayStart + '" data-slot-key="' + slotKey + '" class="button sand slot-btn booked">'
+              var isOpenPlay = slot.status === 'open_play';
+              var reason = $('<span>').text(isOpenPlay ? 'Closed · Open Play' : (slot.reason || 'Booked')).html();
+              return '<button disabled data-slot-start="' + displayStart + '" data-slot-key="' + slotKey + '" class="button sand slot-btn booked' + (isOpenPlay ? ' open-play-closed' : '') + '">'
                 + '<strong>' + displayStart + '–' + displayEnd + '</strong>'
-                + '<span style="font-size:0.68rem;">' + (slot.reason || 'Booked') + '</span>'
+                + '<span style="font-size:0.68rem;">' + reason + '</span>'
                 + '</button>';
             }
           }).join('');

@@ -29,6 +29,8 @@ class AuthController {
             $user = $this->authService->login((string)$identifier, (string)$data['password']);
             Response::success('Logged in successfully', $user);
         } catch (Exception $e) {
+            \App\Application\Services\SecurityMonitor::log('login_failed','Sign-in rejected.');
+            try { \App\Application\Services\SecurityMonitor::attempt('login_failure',10); } catch (\RuntimeException $limit) { Response::error($limit->getMessage(),[],429); }
             Response::error($e->getMessage());
         }
     }
@@ -95,6 +97,7 @@ class AuthController {
         }
 
         Response::success('User context', [
+            'csrf_token' => $this->csrfToken(),
             'user' => Auth::user(),
             'role' => Auth::role(),
             'permissions' => Auth::permissions(),
@@ -106,6 +109,12 @@ class AuthController {
                 'currency_symbol' => $settings['currency_symbol'] ?? '₱'
             ]
         ]);
+    }
+
+    private function csrfToken(): string {
+        $token=\App\Core\Auth\Session::get('app_csrf');
+        if (!$token) { $token=bin2hex(random_bytes(24)); \App\Core\Auth\Session::set('app_csrf',$token); }
+        return $token;
     }
 
     public function checkUnique(Request $request): void {

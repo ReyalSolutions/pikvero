@@ -187,6 +187,8 @@ class SubscriptionController {
         }
 
         if (!$orgId) Response::error('No organization associated with this account.');
+        $ownedOrg=\App\Core\Database\Connection::getInstance()->selectOne('SELECT id FROM organizations WHERE id=? AND owner_id=?',[$orgId,(int)$user['id']],'ii');
+        if (!$ownedOrg) Response::forbidden('Only the organization owner may purchase its package.');
 
         $data = $request->all();
         $planId = (int)($data['plan_id'] ?? 0);
@@ -202,7 +204,20 @@ class SubscriptionController {
 
         $paymentNote = !empty($ref) ? "PayMongo ({$method}) Ref #{$ref}" : '';
 
-        $res = $this->repo->subscribeTenantToPlan($orgId, $planId, $cycle, $paymentNote);
+        $db=\App\Core\Database\Connection::getInstance();
+        $db->beginTransaction();
+        try {
+            \App\Application\Services\PackagePaymentVerifier::verify($ref,$planId,$cycle);
+            $res = $this->repo->subscribeTenantToPlan($orgId, $planId, $cycle, $paymentNote);
+            if (empty($res['success'])) throw new \RuntimeException($res['message'] ?? 'Package activation failed.');
+            \App\Application\Services\PackagePaymentVerifier::consume($ref);
+            $db->commit();
+        } catch (\Throwable $e) {
+            $db->rollback();
+            \App\Application\Services\SecurityMonitor::log('package_activation_rejected','Package activation or receipt verification rejected.');
+            try { \App\Application\Services\SecurityMonitor::attempt('package_rejection',5); } catch (\RuntimeException $limit) { Response::error($limit->getMessage(),[],429); }
+            Response::error('Package activation rejected. Complete a valid checkout or contact support.');
+        }
         if (!empty($res['success'])) {
             Response::success($res['message'] ?? 'Successfully subscribed to plan!');
         } else {
@@ -234,6 +249,11 @@ class SubscriptionController {
     }
 
     public function bypassUpgradeSubscription(Request $request): void {
+        $liveAdmin=\App\Core\Database\Connection::getInstance()->selectOne("SELECT r.name FROM users u JOIN roles r ON r.id=u.role_id WHERE u.id=? AND u.status='active' AND u.deleted_at IS NULL",[(int)Auth::id()],'i');
+        if (!$liveAdmin || !in_array($liveAdmin['name'],['super_admin','platform_admin'],true)) Response::forbidden('Platform administrator required.');
+        $token=(string)($_SERVER['HTTP_X_CSRF_TOKEN']??'');
+        if (!$token || !hash_equals((string)\App\Core\Auth\Session::get('app_csrf',''),$token)) Response::forbidden('Reload the page before complimentary activation.');
+        if (!Auth::hasRole('super_admin','platform_admin')) Response::forbidden('Complimentary activation is restricted to platform administrators.');
         if (!Auth::hasPermission('subscriptions.manage', 'plans.manage', 'system.manage') && !Auth::hasRole('super_admin', 'platform_admin')) {
             Response::forbidden('Permission denied: Required permission subscriptions.manage or system.manage');
         }

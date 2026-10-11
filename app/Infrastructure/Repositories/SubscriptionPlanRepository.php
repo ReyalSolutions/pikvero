@@ -384,6 +384,9 @@ class SubscriptionPlanRepository {
 
         $isYearly = ($billingCycle === 'yearly');
         $isFree   = ((int)($plan['is_free_trial'] ?? 0) === 1) && !$this->hasUsedFreeTrial($orgId);
+        if ((int)($plan['is_free_trial'] ?? 0) === 1 && !$isFree && (float)$plan['monthly_price'] <= 0) {
+            return ['success'=>false,'message'=>'The free trial has already been used. Select a paid package.'];
+        }
 
         $monthsToAdd = $isFree ? max(1, (int)($plan['trial_duration_months'] ?? 1)) : ($isYearly ? 12 : 1);
         
@@ -437,6 +440,7 @@ class SubscriptionPlanRepository {
             INSERT INTO subscription_payments (subscription_id, amount, payment_method, payment_status)
             VALUES (?, ?, ?, 'paid')
         ", [$subId, $finalAmount, $paymentNote], 'ids');
+        (new ReferralRepository())->syncPayments();
 
         return [
             'success' => true,

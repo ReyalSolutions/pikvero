@@ -333,6 +333,13 @@ const SidebarComponent = {
     }
 
     // Build Navigation HTML
+    if (AuthHelper.currentUser?.user) {
+      menuStructure.push({type:'single',key:'referrals',label:'Referral Bonuses',link:portalType==='customer'?'/pikvero/public/customer/referrals.php':'/pikvero/public/admin/referrals.php',icon:'bi-gift-fill'});
+    }
+    if (['super_admin','platform_admin'].includes(AuthHelper.currentUser?.role)) {
+      menuStructure.push({type:'single',key:'security',label:'Security Monitor',link:'/pikvero/public/admin/security.php',icon:'bi-shield-lock'});
+      menuStructure.push({type:'single',key:'page-visits',label:'Page Visits',link:'/pikvero/public/admin/page-visits.php',icon:'bi-bar-chart-line'});
+    }
     let navListHtml = menuStructure.map(group => {
       if (group.type === 'single') {
         const isActive = (activeKey === group.key);

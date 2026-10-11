@@ -28,7 +28,7 @@ $phone    = Sanitizer::cleanPhone($input['phone'] ?? '');
 $pass     = Sanitizer::cleanPassword($rawArray['pass'] ?? '');
 
 $orgname  = Sanitizer::cleanString($input['orgname'] ?? '');
-$taxid    = Sanitizer::cleanString($input['taxid'] ?? '');
+$taxid    = Sanitizer::cleanString($input['taxid'] ?? '') ?: null;
 
 $facname  = Sanitizer::cleanString($input['facname'] ?? '');
 $address  = Sanitizer::cleanString($input['address'] ?? '');
@@ -63,6 +63,9 @@ $db->beginTransaction();
 
 try {
     if ($existingUser) {
+        if ((int)(Auth::id() ?? 0) !== (int)$existingUser['id'] && !password_verify($pass, $existingUser['password_hash'])) {
+            throw new \RuntimeException('Please sign in to your existing account before completing owner onboarding.');
+        }
         $userId = (int)$existingUser['id'];
         $sql = "UPDATE users SET first_name = ?, last_name = ?, phone = ?, role_id = ?, status = 'active', updated_at = NOW() WHERE id = ?";
         $db->execute($sql, [$fname, $lname, $phone, $ownerRoleId, $userId], 'sssii');
@@ -78,6 +81,9 @@ try {
 
     }
     $db->execute("INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (?, ?)", [$userId, $ownerRoleId], 'ii');
+    $referrals = new \App\Infrastructure\Repositories\ReferralRepository();
+    $referrals->ensureCode($userId);
+    $referrals->attach($userId, (string)($input['referral_code'] ?? ''));
 
     // 2. Create Organization
     $sqlOrg = "INSERT INTO organizations (name, tax_id, phone, email, owner_id, status, created_at)
@@ -95,12 +101,17 @@ try {
         if (!file_exists($uploadDir)) {
             @mkdir($uploadDir, 0777, true);
         }
-        $ext = pathinfo($docData['name'] ?? 'doc.pdf', PATHINFO_EXTENSION);
+        $ext = strtolower(pathinfo($docData['name'] ?? 'doc.pdf', PATHINFO_EXTENSION));
+        if (!in_array($ext,['pdf','png','jpg','jpeg'],true)) throw new \RuntimeException('Invalid document format.');
         $fileName = 'owner_' . $userId . '_' . time() . '.' . $ext;
         $fullPath = $uploadDir . $fileName;
         
         $base64Parts = explode(',', $docData['base64']);
-        $rawBytes = base64_decode(end($base64Parts));
+        $encoded=end($base64Parts);
+        if (!is_string($encoded) || strlen($encoded)>7*1024*1024) throw new \RuntimeException('Document exceeds the size limit.');
+        $rawBytes = base64_decode($encoded,true);
+        $allowedMime=['pdf'=>'application/pdf','png'=>'image/png','jpg'=>'image/jpeg','jpeg'=>'image/jpeg'];
+        if ($rawBytes===false || strlen($rawBytes)>5*1024*1024 || (new \finfo(FILEINFO_MIME_TYPE))->buffer($rawBytes)!==$allowedMime[$ext]) throw new \RuntimeException('Invalid document content.');
         if ($rawBytes) {
             file_put_contents($fullPath, $rawBytes);
             $docPath = '/pikvero/public/uploads/verification_docs/' . $fileName;
@@ -122,8 +133,13 @@ try {
 
     // 6. Create Subscription
     $plan = $db->selectOne("SELECT * FROM subscription_plans WHERE slug = ? OR name LIKE ? LIMIT 1", [$subplan, "%{$subplan}%"]);
-    $planId = $plan ? (int)$plan['id'] : 1;
+    if (!$plan) throw new \RuntimeException('Selected subscription plan not found.');
+    $planId = (int)$plan['id'];
+    $verifiedCheckout = \App\Application\Services\PackagePaymentVerifier::verify((string)($paymentData['reference'] ?? ''),$planId,'monthly');
     $trialEligible = (int)($plan['is_free_trial'] ?? 0) === 1 && !(new SubscriptionPlanRepository())->hasUsedFreeTrial(0, $userId);
+    if ((int)($plan['is_free_trial'] ?? 0) === 1 && !$trialEligible && (int)$verifiedCheckout['amount_centavos'] === 0) {
+        throw new \RuntimeException('The free trial has already been used. Select a paid package.');
+    }
     $subscriptionMonths = $trialEligible
         ? max(1, (int)($plan['trial_duration_months'] ?? 1))
         : 1;
@@ -134,7 +150,7 @@ try {
     $subscriptionId = $db->getLastInsertId();
 
     // 7. Create Subscription Payment Record
-    $amountPaid = isset($paymentData['totalAmount']) ? (float)$paymentData['totalAmount'] : ($plan ? (float)$plan['monthly_price'] : 999.00);
+    $amountPaid = (int)$verifiedCheckout['amount_centavos']/100;
     $payMethodStr = isset($paymentData['payMethod']) ? $paymentData['payMethod'] : $paymethod;
 
     if (!$trialEligible && $plan && (float)$plan['monthly_price'] > 0 && $amountPaid < (float)$plan['monthly_price']) {
@@ -148,6 +164,7 @@ try {
     $sqlPay = "INSERT INTO subscription_payments (subscription_id, amount, payment_method, payment_status, created_at)
                VALUES (?, ?, ?, 'completed', NOW())";
     $db->execute($sqlPay, [$subscriptionId, $amountPaid, $payMethodStr]);
+    $referrals->syncPayments();
 
     $ownerUser = (new UserRepository())->findById($userId);
     if (!$ownerUser) {
@@ -156,6 +173,7 @@ try {
     $ownerUser['role_id'] = $ownerRoleId;
     $ownerUser['role_name'] = 'court_owner';
     $ownerUser['organization_id'] = $organizationId;
+    \App\Application\Services\PackagePaymentVerifier::consume((string)$paymentData['reference']);
     $db->commit();
 
     // Set PHP Session for auto-login
@@ -172,5 +190,8 @@ try {
 
 } catch (\Exception $e) {
     $db->rollback();
-    Response::error('Failed to save onboarding records to database: ' . $e->getMessage());
+    \App\Application\Services\SecurityMonitor::log('onboarding_rejected','Owner onboarding or package validation rejected.');
+    try { \App\Application\Services\SecurityMonitor::attempt('package_rejection',5); } catch (\RuntimeException $limit) { Response::error($limit->getMessage(),[],429); }
+    error_log('Owner onboarding rejected: '.$e->getMessage());
+    Response::error('Onboarding could not be completed. Check your details and complete a valid package checkout.');
 }

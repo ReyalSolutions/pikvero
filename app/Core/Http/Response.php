@@ -37,6 +37,7 @@ class Response {
     }
 
     public static function forbidden(string $message = 'Access forbidden'): void {
+        try { \App\Application\Services\SecurityMonitor::log('access_denied','Restricted action denied.'); } catch (\Throwable $ignored) {}
         self::json([
             'success' => false,
             'message' => $message,

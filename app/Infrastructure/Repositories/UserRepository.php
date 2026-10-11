@@ -70,7 +70,9 @@ class UserRepository {
             $data['role_id'],
             $data['status'] ?? 'active'
         ], 'ssssssis');
-        return $this->db->getLastInsertId();
+        $id = $this->db->getLastInsertId();
+        (new ReferralRepository())->ensureCode($id);
+        return $id;
     }
 
     public function getRoleIdByName(string $name): ?int {

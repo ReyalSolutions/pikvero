@@ -23,6 +23,7 @@
  *     always included.  Put page-specific <script> tags after this include.
  */
 
+require_once __DIR__ . '/../app/bootstrap.php';
 $pageTitle   = $pageTitle   ?? 'Pikvero';
 $headExtras  = $headExtras  ?? [];
 $v           = time();   // cache-bust token

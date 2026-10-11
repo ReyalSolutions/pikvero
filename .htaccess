@@ -1,4 +1,21 @@
 DirectoryIndex index.php index.html
+Options -Indexes
+<IfModule mod_mime.c>
+    AddType application/javascript .js
+    AddType application/manifest+json .webmanifest
+</IfModule>
+<IfModule mod_headers.c>
+    <Files "service-worker.js">
+        Header set Cache-Control "no-cache"
+        Header set Service-Worker-Allowed "/"
+    </Files>
+</IfModule>
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(?:pikvero/)?(?:app|database|tests|vendor|\.git|\.codex|\.agents)(?:/|$) - [F,L,NC]
+    RewriteRule ^(?:pikvero/)?(?:debug|phpinfo)(?:\.php)?$ - [F,L,NC]
+    RewriteRule (?:^|/)\.(?!well-known/) - [F,L]
+</IfModule>
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
@@ -17,6 +34,7 @@ DirectoryIndex index.php index.html
     # Exclude POST requests and API requests so API endpoints are never redirected
     RewriteCond %{REQUEST_METHOD} !POST
     RewriteCond %{REQUEST_URI} !/api/ [NC]
+    RewriteCond %{REQUEST_URI} !/public/manifest\.php$ [NC]
     RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s([^.]+)\.php [NC]
     RewriteRule ^ %1 [R=301,L]
 

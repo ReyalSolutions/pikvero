@@ -8,21 +8,20 @@ define('ROOT_DIR', dirname(__DIR__));
 define('APP_DIR', __DIR__);
 
 // 1. Error Reporting & Debugging Handler
-$isDebug = (isset($_GET['debug']) && $_GET['debug'] === '1')
-    || (getenv('APP_DEBUG') === 'true')
-    || (isset($_COOKIE['pikvero_debug']) && $_COOKIE['pikvero_debug'] === '1');
+$isDebug = getenv('APP_DEBUG') === 'true';
 
 if ($isDebug) {
     @ini_set('display_errors', '1');
     @ini_set('display_startup_errors', '1');
     error_reporting(E_ALL);
 } else {
-    @ini_set('display_errors', '1'); // Enable during deployment verification so 500 errors can be diagnosed
+    @ini_set('display_errors', '0');
     error_reporting(E_ALL & ~E_NOTICE & ~E_DEPRECATED);
 }
 
 // Global Exception Handler so uncaught exceptions render a clear diagnostic card instead of a blank HTTP 500
 set_exception_handler(function (\Throwable $e) {
+    if (getenv('APP_DEBUG') !== 'true') { error_log('Application exception: '.$e->getMessage()); http_response_code(500); header('Content-Type: text/plain; charset=utf-8'); echo 'Unable to process this request. Please try again or contact support.'; return; }
     if (!headers_sent()) {
         http_response_code(500);
         header('Content-Type: text/html; charset=utf-8');
@@ -122,4 +121,6 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Load Application Configurations
 require_once APP_DIR . '/Config/AppConfig.php';
+\App\Application\Services\SecurityMonitor::enforce();
+\App\Application\Services\PageVisitTracker::register();
 

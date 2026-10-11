@@ -51,12 +51,13 @@ class OpenPlayRepository {
         $start = max(0, $start);
         $length = max(1, min(100, $length));
 
-        $sql = "SELECT s.*, f.name AS facility_name, f.city,
+        $sql = "SELECT s.*, f.name AS facility_name, f.city, c.name AS court_name,
                        (SELECT COUNT(*) FROM open_play_registrations r WHERE r.session_id = s.id) AS registered_players,
                        (SELECT COUNT(*) FROM open_play_registrations r WHERE r.session_id = s.id AND r.checkin_status = 'checked_in') AS checked_in_count,
                        (SELECT COALESCE(SUM(r.amount_paid), 0) FROM open_play_registrations r WHERE r.session_id = s.id AND r.payment_status = 'paid') AS total_revenue
                 FROM open_play_sessions s
                 JOIN facilities f ON s.facility_id = f.id
+                LEFT JOIN courts c ON s.court_id = c.id
                 WHERE {$whereSql}
                 ORDER BY s.session_date DESC, s.start_time ASC
                 LIMIT {$start}, {$length}";
@@ -71,12 +72,13 @@ class OpenPlayRepository {
     }
 
     public function getSessionById(int $id): ?array {
-        $sql = "SELECT s.*, f.name AS facility_name, f.city, f.address,
+        $sql = "SELECT s.*, f.name AS facility_name, f.city, f.address, c.name AS court_name,
                        (SELECT COUNT(*) FROM open_play_registrations r WHERE r.session_id = s.id) AS registered_players,
                        (SELECT COUNT(*) FROM open_play_registrations r WHERE r.session_id = s.id AND r.checkin_status = 'checked_in') AS checked_in_count,
                        (SELECT COALESCE(SUM(r.amount_paid), 0) FROM open_play_registrations r WHERE r.session_id = s.id AND r.payment_status = 'paid') AS total_revenue
                 FROM open_play_sessions s
                 JOIN facilities f ON s.facility_id = f.id
+                LEFT JOIN courts c ON s.court_id = c.id
                 WHERE s.id = ? LIMIT 1";
         $session = $this->db->selectOne($sql, [$id], 'i');
         if ($session) {
@@ -95,10 +97,12 @@ class OpenPlayRepository {
     }
 
     public function createSession(array $data): int {
-        $sql = "INSERT INTO open_play_sessions (facility_id, title, session_date, start_time, end_time, fee_per_player, max_players, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        $this->validateSessionCourt($data);
+        $sql = "INSERT INTO open_play_sessions (facility_id, court_id, title, session_date, start_time, end_time, fee_per_player, max_players, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $this->db->execute($sql, [
             (int)$data['facility_id'],
+            (int)$data['court_id'],
             $data['title'],
             $data['session_date'],
             $data['start_time'],
@@ -106,12 +110,15 @@ class OpenPlayRepository {
             (float)($data['fee_per_player'] ?? 70.00),
             (int)($data['max_players'] ?? 16),
             $data['status'] ?? 'open'
-        ], 'issssdis');
+        ], 'iissssdis');
         return $this->db->getLastInsertId();
     }
 
     public function updateSession(int $id, array $data): bool {
+        $this->validateSessionCourt($data, $id);
         $sql = "UPDATE open_play_sessions SET 
+                facility_id = ?,
+                court_id = ?,
                 title = ?, 
                 session_date = ?, 
                 start_time = ?, 
@@ -121,6 +128,8 @@ class OpenPlayRepository {
                 status = ? 
                 WHERE id = ?";
         return $this->db->execute($sql, [
+            (int)$data['facility_id'],
+            (int)$data['court_id'],
             $data['title'],
             $data['session_date'],
             $data['start_time'],
@@ -129,7 +138,40 @@ class OpenPlayRepository {
             (int)($data['max_players'] ?? 16),
             $data['status'] ?? 'open',
             $id
-        ], 'ssssdisi');
+        ], 'iissssdisi');
+    }
+
+    private function validateSessionCourt(array $data, int $excludeId = 0): void {
+        $courtId = (int)($data['court_id'] ?? 0);
+        $facilityId = (int)($data['facility_id'] ?? 0);
+        $court = $this->db->selectOne("SELECT id FROM courts WHERE id = ? AND facility_id = ? AND status = 'active'", [$courtId, $facilityId], 'ii');
+        if (!$court) {
+            throw new Exception('Please select an active court belonging to the selected facility.');
+        }
+        $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $data['session_date'] ?? '');
+        if (!$date || $date->format('Y-m-d') !== ($data['session_date'] ?? '')) {
+            throw new Exception('Please select a valid session date.');
+        }
+        $start = $data['start_time'] ?? '';
+        $end = $data['end_time'] ?? '';
+        if (!preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/', $start)
+            || !preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/', $end)
+            || strtotime($start) >= strtotime($end)) {
+            throw new Exception('End time must be after start time on the same day.');
+        }
+        $status = $data['status'] ?? 'open';
+        if (!in_array($status, ['open', 'full', 'completed', 'cancelled'], true)) {
+            throw new Exception('Invalid session status.');
+        }
+        if (!in_array($status, ['open', 'full'], true)) return;
+        if ((new BookingRepository())->checkOverlapping($courtId, $data['session_date'], $start, $end)) {
+            throw new Exception('This court already has a booking during the selected time.');
+        }
+        $overlap = $this->db->selectOne(
+            "SELECT id FROM open_play_sessions WHERE court_id = ? AND session_date = ? AND status IN ('open', 'full') AND start_time < ? AND end_time > ? AND id != ? LIMIT 1",
+            [$courtId, $data['session_date'], $end, $start, $excludeId], 'isssi'
+        );
+        if ($overlap) throw new Exception('This court already has an Open Play session during the selected time.');
     }
 
     public function registerPlayer(array $data): int {

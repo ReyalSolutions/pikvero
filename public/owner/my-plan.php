@@ -208,6 +208,9 @@ if (empty($enabledPaymentMethods)) {
         <button type="button" onclick="closeSubscribeModal()" style="position:absolute; top:18px; right:18px; background:none; border:none; font-size:1.8rem; cursor:pointer; color:var(--ink); font-weight:900; line-height:1;">&times;</button>
 
         <input type="hidden" id="sub_plan_id">
+        <label for="package-referral-code" style="display:block;margin:12px 0;">Referral code (optional, first paid package only)
+          <input id="package-referral-code" type="text" maxlength="24" placeholder="Enter your referrer's code" style="display:block;width:100%;padding:10px;border:2px solid var(--ink);border-radius:8px;box-sizing:border-box;">
+        </label>
 
         <div style="display:flex; align-items:center; gap:14px; margin-bottom:20px;">
           <div class="brand-mark" style="width:48px; height:48px; font-size:1.4rem; background:var(--coral); color:var(--white); border-radius:12px; display:grid; place-items:center; border:2px solid var(--ink); box-shadow:2px 2px 0 var(--ink);">
@@ -1299,6 +1302,11 @@ if (empty($enabledPaymentMethods)) {
       const redirectUrl = window.location.origin + window.location.pathname;
 
       try {
+        const referralCode = document.getElementById('package-referral-code').value.trim().toUpperCase();
+        if (referralCode) {
+          const referrals = await Api.get('/pikvero/api/referrals.php');
+          await Api.post('/pikvero/api/referrals.php', {action:'attach',referral_code:referralCode,csrf_token:referrals.data.csrf_token});
+        }
         const res = await Api.post('/pikvero/api/payments/paymongo-checkout.php', {
           plan_id: planId,
           billing_cycle: currentBillingCycle,

@@ -194,7 +194,7 @@ if ($paymentStatus === 'success' && $regId > 0 && Auth::check()) {
     }
   </style>
 <link rel="stylesheet" href="/pikvero/assets/css/player-pages.css?v=2">
-<link rel="manifest" href="/pikvero/public/manifest.php">
+<link rel="manifest" href="/pikvero/manifest.webmanifest">
 <meta name="theme-color" content="#003d2d">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -463,6 +463,7 @@ if ($paymentStatus === 'success' && $regId > 0 && Auth::check()) {
                     <i class="bi bi-building"></i> ${escapeHtml(s.facility_name)} (${escapeHtml(s.city || 'Bohol')})
                   </div>
 
+                  <div style="font-size:0.78rem; margin-bottom:8px;"><i class="bi bi-grid"></i> Court: ${escapeHtml(s.court_name || 'Not assigned')}</div>
                   <div class="op-card-date-box" style="background:var(--sand); border:1.5px solid var(--ink); border-radius:8px; padding:6px 10px; font-size:0.78rem; margin-bottom:10px; font-weight:700;">
                     <i class="bi bi-calendar-event"></i> ${s.session_date} &bull; <i class="bi bi-clock"></i> ${(s.start_time||'').substring(0,5)}-${(s.end_time||'').substring(0,5)}
                   </div>
@@ -527,6 +528,7 @@ if ($paymentStatus === 'success' && $regId > 0 && Auth::check()) {
 
                 <h3 style="font-size:1.05rem; font-weight:800; text-transform:uppercase; margin:0 0 3px;">${p.session_title}</h3>
                 <div style="font-size:0.78rem; color:#4a5c56; margin-bottom:6px;"><i class="bi bi-building"></i> ${p.facility_name} &bull; <i class="bi bi-calendar"></i> ${p.session_date}</div>
+                <div style="font-size:0.78rem; margin-bottom:6px;"><i class="bi bi-grid"></i> Court: ${escapeHtml(p.court_name || 'Not assigned')}</div>
               </div>
 
               <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed var(--ink); padding-top:6px; margin-top:4px;">
@@ -587,6 +589,7 @@ if ($paymentStatus === 'success' && $regId > 0 && Auth::check()) {
       document.getElementById('join-session-preview').innerHTML = `
         <div style="font-weight:800; font-size:0.95rem; text-transform:uppercase;">${escapeHtml(currentSelectedSession.title)}</div>
         <div style="font-size:0.78rem; color:#4a5c56;">${escapeHtml(currentSelectedSession.facility_name)} &bull; ${currentSelectedSession.session_date} (${(currentSelectedSession.start_time||'').substring(0,5)} - ${(currentSelectedSession.end_time||'').substring(0,5)})</div>
+        <div style="font-size:0.78rem; margin-top:4px;">Court: ${escapeHtml(currentSelectedSession.court_name || 'Not assigned')}</div>
       `;
 
       selectPaymentMethod('gcash');

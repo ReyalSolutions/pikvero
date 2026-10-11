@@ -17,6 +17,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $rawInput = file_get_contents('php://input');
 $rawArray = json_decode($rawInput, true) ?? $_POST;
 $input = Sanitizer::clean($rawArray);
+\App\Application\Services\SecurityMonitor::attempt('package_checkout',20);
+if (!in_array($input['billing_cycle'] ?? 'monthly',['monthly','yearly'],true)) Response::error('Invalid billing cycle.');
+$allowedOrigin=\App\Config\AppConfig::$baseUrl;
+if (!empty($input['redirect_url']) && parse_url($input['redirect_url'],PHP_URL_HOST)!==parse_url($allowedOrigin,PHP_URL_HOST)) Response::error('Invalid checkout return URL.');
 
 $planId       = (int)($input['plan_id'] ?? 0);
 $planSlug     = strtolower(Sanitizer::cleanString($input['plan_slug'] ?? ''));
@@ -107,6 +111,7 @@ if (empty($paymentMethodTypes)) {
 // Generate concrete session reference ID
 $referenceId = 'cs_' . bin2hex(random_bytes(10));
 
+$clientReference=$referenceId;
 $successUrl = "{$redirectUrl}?payment=success&ref={$referenceId}&plan_id={$plan['id']}&plan={$plan['slug']}&cycle={$billingCycle}&method={$selectedChannel}&amount={$totalAmount}";
 $cancelUrl = "{$redirectUrl}?payment=cancelled";
 
@@ -139,6 +144,7 @@ $checkoutPayload = [
 if ($totalAmount <= 0) {
     $referenceId = 'free_' . bin2hex(random_bytes(10));
     $checkoutUrl = "{$redirectUrl}?payment=success&ref={$referenceId}&plan_id={$plan['id']}&plan={$plan['slug']}&cycle={$billingCycle}&method=free_trial&amount=0";
+    \App\Application\Services\PackagePaymentVerifier::remember($referenceId,null,(int)$plan['id'],$billingCycle,0);
     Response::success('Free trial subscription activated.', [
         'checkout_url' => $checkoutUrl,
         'reference'    => $referenceId,
@@ -170,7 +176,7 @@ if (function_exists('curl_init')) {
         'Accept: application/json'
     ]);
     curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
     
     $responseRaw = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -192,11 +198,10 @@ if (empty($checkoutUrl) && !empty($apiErrorMsg)) {
     Response::error("PayMongo Gateway Error: " . $apiErrorMsg);
 }
 
-// Fallback for offline sandbox test environment with dummy keys
 if (empty($checkoutUrl)) {
-    $referenceId = 'cs_test_' . bin2hex(random_bytes(10));
-    $checkoutUrl = "{$redirectUrl}?payment=success&ref={$referenceId}&plan={$plan['slug']}&method={$selectedChannel}&amount={$totalAmount}";
+    Response::error('Payment provider unavailable. No payment or package activation has been recorded.');
 }
+\App\Application\Services\PackagePaymentVerifier::remember($clientReference,$referenceId,(int)$plan['id'],$billingCycle,$amountInCentavos);
 
 Response::success('PayMongo Checkout Session created successfully.', [
     'checkout_url' => $checkoutUrl,

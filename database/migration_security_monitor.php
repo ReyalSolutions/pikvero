@@ -1,0 +1,9 @@
+<?php
+require_once __DIR__.'/../app/bootstrap.php';
+use App\Core\Database\Connection;
+$db=Connection::getInstance();
+$db->execute("CREATE TABLE IF NOT EXISTS security_events (id BIGINT AUTO_INCREMENT PRIMARY KEY, ip_address VARCHAR(45) NOT NULL, user_id INT NULL, event_type VARCHAR(50) NOT NULL, detail VARCHAR(255) NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, INDEX(ip_address,created_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+$db->execute("CREATE TABLE IF NOT EXISTS security_ip_blocks (ip_address VARCHAR(45) PRIMARY KEY, reason VARCHAR(255) NOT NULL, blocked_by INT NULL, blocked_until DATETIME NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+$db->execute("CREATE TABLE IF NOT EXISTS security_attempts (ip_address VARCHAR(45) NOT NULL, category VARCHAR(30) NOT NULL, started_at DATETIME NOT NULL, attempts INT NOT NULL DEFAULT 1, PRIMARY KEY(ip_address,category)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+$db->execute("CREATE TABLE IF NOT EXISTS package_checkouts (reference VARCHAR(64) PRIMARY KEY, provider_id VARCHAR(100) NULL UNIQUE, session_hash CHAR(64) NOT NULL, user_id INT NULL, plan_id INT NOT NULL, billing_cycle VARCHAR(10) NOT NULL, amount_centavos INT NOT NULL, consumed_at DATETIME NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+echo "Security and verified package checkout tables created.\n";

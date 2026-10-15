@@ -7,8 +7,16 @@ use Exception;
 class OpenPlayRepository {
     private Connection $db;
 
-    public function __construct() {
+    public function __construct(private bool $adminScope = false) {
         $this->db = Connection::getInstance();
+    }
+
+    private function scope(string $column): string {
+        return $this->adminScope ? \App\Core\Auth\TenantScope::facilitySql($column) : '1=1';
+    }
+
+    private function requireSession(int $id): void {
+        if ($this->adminScope && !$this->getSessionById($id)) \App\Core\Http\Response::forbidden('Session not found or access denied.');
     }
 
     public function getPaginatedSessions(
@@ -17,7 +25,8 @@ class OpenPlayRepository {
         string $search = '',
         ?int $facilityId = null
     ): array {
-        $whereClauses = ["1=1"];
+        $scope = $this->scope('s.facility_id');
+        $whereClauses = [$scope];
         $params = [];
         $types = "";
 
@@ -37,7 +46,9 @@ class OpenPlayRepository {
 
         $whereSql = implode(" AND ", $whereClauses);
 
-        $totalCountRow = $this->db->selectOne("SELECT COUNT(*) AS total FROM open_play_sessions s");
+        $totalWhere = $scope;
+        if ($facilityId !== null && $facilityId > 0) $totalWhere .= ' AND s.facility_id = ' . (int)$facilityId;
+        $totalCountRow = $this->db->selectOne("SELECT COUNT(*) AS total FROM open_play_sessions s WHERE {$totalWhere}");
         $recordsTotal = (int)($totalCountRow['total'] ?? 0);
 
         $filteredCountRow = $this->db->selectOne("
@@ -72,6 +83,7 @@ class OpenPlayRepository {
     }
 
     public function getSessionById(int $id): ?array {
+        $scope = $this->scope('s.facility_id');
         $sql = "SELECT s.*, f.name AS facility_name, f.city, f.address, c.name AS court_name,
                        (SELECT COUNT(*) FROM open_play_registrations r WHERE r.session_id = s.id) AS registered_players,
                        (SELECT COUNT(*) FROM open_play_registrations r WHERE r.session_id = s.id AND r.checkin_status = 'checked_in') AS checked_in_count,
@@ -79,7 +91,7 @@ class OpenPlayRepository {
                 FROM open_play_sessions s
                 JOIN facilities f ON s.facility_id = f.id
                 LEFT JOIN courts c ON s.court_id = c.id
-                WHERE s.id = ? LIMIT 1";
+                WHERE s.id = ? AND {$scope} LIMIT 1";
         $session = $this->db->selectOne($sql, [$id], 'i');
         if ($session) {
             $session['registrations'] = $this->getSessionRegistrations($id);
@@ -88,10 +100,11 @@ class OpenPlayRepository {
     }
 
     public function getSessionRegistrations(int $sessionId): array {
+        $scope = $this->scope('s.facility_id');
         $sql = "SELECT r.*, u.email AS user_email
                 FROM open_play_registrations r
                 LEFT JOIN users u ON r.user_id = u.id
-                WHERE r.session_id = ?
+                WHERE r.session_id = ? AND EXISTS (SELECT 1 FROM open_play_sessions s WHERE s.id = r.session_id AND {$scope})
                 ORDER BY r.id DESC";
         return $this->db->select($sql, [$sessionId], 'i');
     }
@@ -115,6 +128,7 @@ class OpenPlayRepository {
     }
 
     public function updateSession(int $id, array $data): bool {
+        $this->requireSession($id);
         $this->validateSessionCourt($data, $id);
         $sql = "UPDATE open_play_sessions SET 
                 facility_id = ?,
@@ -144,6 +158,7 @@ class OpenPlayRepository {
     private function validateSessionCourt(array $data, int $excludeId = 0): void {
         $courtId = (int)($data['court_id'] ?? 0);
         $facilityId = (int)($data['facility_id'] ?? 0);
+        if ($this->adminScope) \App\Core\Auth\TenantScope::requireFacility($facilityId);
         $court = $this->db->selectOne("SELECT id FROM courts WHERE id = ? AND facility_id = ? AND status = 'active'", [$courtId, $facilityId], 'ii');
         if (!$court) {
             throw new Exception('Please select an active court belonging to the selected facility.');
@@ -208,6 +223,11 @@ class OpenPlayRepository {
     }
 
     public function checkinPlayer(int $registrationId): bool {
+        if ($this->adminScope) {
+            $scope = $this->scope('s.facility_id');
+            $row = $this->db->selectOne("SELECT r.id FROM open_play_registrations r JOIN open_play_sessions s ON s.id = r.session_id WHERE r.id = ? AND {$scope}", [$registrationId], 'i');
+            if (!$row) throw new Exception('Registration not found or access denied.');
+        }
         $sql = "UPDATE open_play_registrations 
                 SET checkin_status = 'checked_in', checked_in_at = NOW() 
                 WHERE id = ?";
@@ -220,6 +240,7 @@ class OpenPlayRepository {
         int $length = 10,
         string $search = ''
     ): array {
+        $this->requireSession($sessionId);
         $whereClauses = ["r.session_id = ?"];
         $params = [$sessionId];
         $types = "i";
@@ -264,7 +285,11 @@ class OpenPlayRepository {
     }
 
     public function getMetrics(?int $facilityId = null): array {
-        $facilityWhere = ($facilityId && $facilityId > 0) ? "WHERE facility_id = {$facilityId}" : "";
+        $scope = $this->scope('facility_id');
+        $facilityWhere = "WHERE {$scope}";
+        if ($facilityId && $facilityId > 0) $facilityWhere .= " AND facility_id = {$facilityId}";
+        $playersWhere = $this->scope('s.facility_id');
+        if ($facilityId && $facilityId > 0) $playersWhere .= " AND s.facility_id = {$facilityId}";
 
         $activeRow = $this->db->selectOne("SELECT COUNT(*) AS cnt FROM open_play_sessions {$facilityWhere}");
         $totalSessions = (int)($activeRow['cnt'] ?? 0);
@@ -275,7 +300,7 @@ class OpenPlayRepository {
                    COALESCE(SUM(CASE WHEN r.payment_status = 'paid' THEN r.amount_paid ELSE 0 END), 0) AS total_revenue
             FROM open_play_registrations r
             JOIN open_play_sessions s ON r.session_id = s.id
-            " . ($facilityId && $facilityId > 0 ? "WHERE s.facility_id = {$facilityId}" : "")
+            WHERE {$playersWhere}"
         );
 
         return [
@@ -287,6 +312,14 @@ class OpenPlayRepository {
     }
 
     public function getPlayerSuggestions(?int $sessionId = null): array {
+        if ($this->adminScope) {
+            if ($sessionId) $this->requireSession($sessionId);
+            $scope = $this->scope('s.facility_id');
+            $params = [];
+            $extra = '';
+            if ($sessionId) { $extra = ' AND r.session_id = ?'; $params[] = $sessionId; }
+            return $this->db->select("SELECT DISTINCT r.user_id, r.player_name, COALESCE(r.player_phone, '') AS player_phone FROM open_play_registrations r JOIN open_play_sessions s ON s.id = r.session_id WHERE {$scope} {$extra} ORDER BY r.player_name LIMIT 150", $params, $sessionId ? 'i' : '');
+        }
         if ($sessionId && $sessionId > 0) {
             $sql = "SELECT DISTINCT 
                         r.user_id, 

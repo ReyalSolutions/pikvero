@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS `organizations` (
   `email` VARCHAR(100) DEFAULT NULL,
   `description` TEXT DEFAULT NULL,
   `owner_id` INT NOT NULL,
+  `theme_mode` ENUM('light','dark') NOT NULL DEFAULT 'light',
   `status` ENUM('draft', 'submitted', 'under_review', 'approved', 'published', 'active', 'inactive') DEFAULT 'submitted',
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (`owner_id`) REFERENCES `users`(`id`) ON DELETE CASCADE

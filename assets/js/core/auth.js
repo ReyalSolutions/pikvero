@@ -16,6 +16,7 @@ const AuthHelper = {
         this.currentUser = res.data.user ? res.data : null;
         if (res.data.settings) {
           this.systemSettings = res.data.settings;
+          window.PortalTheme?.apply(res.data.settings.theme_mode || 'light');
           if (res.data.settings.org_logo_url) {
             this.setFavicon(res.data.settings.org_logo_url);
           }

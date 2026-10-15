@@ -20,7 +20,7 @@ class AdminController {
     private SystemSettingRepository $settingRepo;
 
     public function __construct() {
-        $this->userRepo = new UserRepository();
+        $this->userRepo = new UserRepository(true);
         $this->bookingRepo = new BookingRepository();
         $this->auditRepo = new AuditLogRepository();
         $this->roleRepo = new RoleRepository();
@@ -43,14 +43,16 @@ class AdminController {
             Response::forbidden('Permission denied. Required permission: ' . implode(', ', $requiredPermissions));
         }
 
-        if (Auth::hasRole('court_owner', 'facility_manager')) {
-            return;
-        }
+
 
         Response::forbidden('Super Admin access required.');
     }
 
     public function getDashboard(): void {
+        if (!Auth::hasRole('super_admin', 'platform_admin')) {
+            (new OwnerController())->getDashboard();
+            return;
+        }
         if (!Auth::hasPermission('system.manage', 'users.view', 'reports.view', 'audit_logs.view')) {
             Response::forbidden('Permission denied: You do not have permission to view admin dashboard metrics.');
         }
@@ -316,6 +318,11 @@ class AdminController {
     }
 
     public function getRoles(): void {
+        Auth::requireAuth();
+        if (!Auth::hasRole('super_admin', 'platform_admin')) {
+            $db = \App\Core\Database\Connection::getInstance();
+            Response::success('Facility Staff Roles', $db->select("SELECT id, name, display_name FROM roles WHERE name IN ('facility_manager','receptionist','court_staff')"));
+        }
         $this->verifyAdmin('users.create', 'users.edit', 'users.view', 'users.manage', 'roles.manage', 'permissions.manage', 'system.manage');
         $excludeAdminRoles = !Auth::hasRole('super_admin', 'platform_admin');
         $roles = $this->roleRepo->getAllRolesWithCounts($excludeAdminRoles);
@@ -323,6 +330,7 @@ class AdminController {
     }
 
     public function createRole(Request $request): void {
+        if (!Auth::hasRole('super_admin', 'platform_admin')) Response::forbidden('Platform administrator access required.');
         $this->verifyAdmin('roles.manage', 'system.manage');
         $data = $request->all();
         $displayName = trim($data['display_name'] ?? '');
@@ -342,6 +350,7 @@ class AdminController {
     }
 
     public function updateRole(Request $request): void {
+        if (!Auth::hasRole('super_admin', 'platform_admin')) Response::forbidden('Platform administrator access required.');
         $this->verifyAdmin('roles.manage', 'system.manage');
         $data = $request->all();
         $roleId = (int)($data['role_id'] ?? 0);
@@ -357,6 +366,7 @@ class AdminController {
     }
 
     public function getRolePermissions(Request $request): void {
+        if (!Auth::hasRole('super_admin', 'platform_admin')) Response::forbidden('Platform administrator access required.');
         $this->verifyAdmin('roles.manage', 'permissions.manage', 'system.manage');
         $roleId = (int)($request->get('role_id') ?? 0);
         if (!$roleId) {
@@ -379,6 +389,7 @@ class AdminController {
     }
 
     public function assignRolePermissions(Request $request): void {
+        if (!Auth::hasRole('super_admin', 'platform_admin')) Response::forbidden('Platform administrator access required.');
         $this->verifyAdmin('permissions.manage', 'roles.manage', 'system.manage');
         $data = $request->all();
         $roleId = (int)($data['role_id'] ?? 0);
@@ -400,12 +411,14 @@ class AdminController {
     }
 
     public function getPermissions(): void {
+        if (!Auth::hasRole('super_admin', 'platform_admin')) Response::forbidden('Platform administrator access required.');
         $this->verifyAdmin('permissions.manage', 'roles.manage', 'system.manage');
         $perms = $this->roleRepo->getAllPermissionsWithRoles();
         Response::success('System Permissions List', $perms);
     }
 
     public function deleteRole(Request $request): void {
+        if (!Auth::hasRole('super_admin', 'platform_admin')) Response::forbidden('Platform administrator access required.');
         $this->verifyAdmin('roles.manage', 'system.manage');
         $data = $request->all();
         $roleId = (int)($data['role_id'] ?? 0);
@@ -518,6 +531,7 @@ class AdminController {
             Response::error('No settings data provided.');
         }
 
+        if (isset($data['admin_theme_mode']) && !in_array($data['admin_theme_mode'], ['light', 'dark'], true)) Response::error('Choose light or dark appearance.');
         $this->settingRepo->updateBatch($data);
         $this->auditRepo->log(Auth::id(), 'admin.settings.update', 'Admin', "Updated system security & platform settings");
         Response::success('System & Security settings updated successfully.');

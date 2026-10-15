@@ -29,44 +29,7 @@ class OwnerController {
             Response::forbidden('Access restricted to court owners.');
         }
 
-        $orgId = Auth::organizationId();
-
-        if (!$orgId || $orgId <= 0) {
-            $userId = Auth::id();
-            if ($userId) {
-                try {
-                    $db = \App\Core\Database\Connection::getInstance();
-                    $org = $db->selectOne("SELECT id FROM organizations WHERE owner_id = ? LIMIT 1", [$userId], 'i');
-                    if ($org && !empty($org['id'])) {
-                        $orgId = (int)$org['id'];
-                    }
-                } catch (\Throwable $e) {}
-            }
-        }
-
-        if (!$orgId || $orgId <= 0) {
-            if (Auth::hasRole('super_admin', 'platform_admin', 'admin')) {
-                $orgId = 1;
-            } else if (Auth::check()) {
-                try {
-                    $db = \App\Core\Database\Connection::getInstance();
-                    $firstOrg = $db->selectOne("SELECT id FROM organizations ORDER BY id ASC LIMIT 1");
-                    if ($firstOrg && !empty($firstOrg['id'])) {
-                        $orgId = (int)$firstOrg['id'];
-                    } else {
-                        $orgId = 1;
-                    }
-                } catch (\Throwable $e) {
-                    $orgId = 1;
-                }
-            }
-        }
-
-        if (!$orgId) {
-            Response::forbidden('Owner organization profile not found.');
-        }
-
-        return (int)$orgId;
+        return \App\Core\Auth\TenantScope::requireOrganization();
     }
 
     public function getDashboard(): void {
@@ -738,6 +701,10 @@ class OwnerController {
     }
 
     public function getCourtAvailability(Request $request): void {
+        $this->getTenantOrgId();
+        $court = $this->courtRepo->findById((int)$request->get('court_id'));
+        if (!$court) Response::notFound('Court not found.');
+        \App\Core\Auth\TenantScope::requireFacility((int)$court['facility_id']);
         $courtId = (int)($request->get('court_id') ?? 0);
         $date = trim($request->get('date') ?? '');
 
@@ -793,6 +760,8 @@ class OwnerController {
             Response::error('Validation failed', $validator->errors());
         }
 
+        $theme = $data['theme_mode'] ?? $org['theme_mode'] ?? 'light';
+        if (!in_array($theme, ['light', 'dark'], true)) Response::error('Choose light or dark appearance.');
         $this->orgRepo->updateBranding($orgId, [
             'name' => $data['name'],
             'app_title' => $data['app_title'] ?? null,
@@ -800,7 +769,8 @@ class OwnerController {
             'tax_id' => $data['tax_id'] ?? null,
             'phone' => $data['phone'] ?? null,
             'email' => $data['email'] ?? null,
-            'description' => $data['description'] ?? null
+            'description' => $data['description'] ?? null,
+            'theme_mode' => $theme
         ]);
 
         Response::success('Organization branding settings updated successfully.');

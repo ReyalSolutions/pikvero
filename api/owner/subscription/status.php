@@ -10,7 +10,7 @@ Auth::requireAuth();
 
 $user   = Auth::user();
 $userId = is_array($user) ? (int)($user['id'] ?? 0) : 0;
-$orgId  = is_array($user) ? (int)($user['organization_id'] ?? 0) : 0;
+$orgId  = Auth::organizationId() ?? 0;
 
 if (!$orgId && $userId > 0) {
     $orgRepo = new OrganizationRepository();
@@ -32,27 +32,12 @@ unset($plan);
 
 $hasSubscription = !empty($sub);
 $status = strtolower($sub['status'] ?? 'none');
-$endDate = $sub['end_date'] ?? ($sub['current_period_end'] ?? null);
-$isExpired = false;
-$daysRemaining = 0;
-
-if ($endDate) {
-    $endTimestamp = strtotime($endDate);
-    $now = time();
-    $daysRemaining = (int)ceil(($endTimestamp - $now) / 86400);
-    if ($endTimestamp < $now) {
-        $isExpired = true;
-        $status = 'expired';
-    }
-} else if ($hasSubscription && !empty($sub['is_free_trial']) && !empty($sub['trial_end_date'])) {
-    $endTimestamp = strtotime($sub['trial_end_date']);
-    $now = time();
-    $daysRemaining = (int)ceil(($endTimestamp - $now) / 86400);
-    if ($endTimestamp < $now) {
-        $isExpired = true;
-        $status = 'expired';
-    }
-}
+$endDate = $sub['current_period_end'] ?? null;
+$end = \App\Application\Services\SubscriptionBilling::periodEnd($endDate);
+$now = new \DateTimeImmutable();
+$isExpired = $hasSubscription && (!$end || $end < $now);
+$daysRemaining = $end ? (int)ceil(($end->getTimestamp() - $now->getTimestamp()) / 86400) : 0;
+if ($isExpired) $status = 'expired';
 
 if (!$hasSubscription) {
     $status = 'none';
@@ -89,6 +74,7 @@ $limitReached = [
 ];
 
 Response::success('Subscription status evaluated.', [
+    'organization_id'     => $orgId,
     'has_subscription'    => $hasSubscription,
     'subscription_status' => $status,
     'subscription'        => $sub,

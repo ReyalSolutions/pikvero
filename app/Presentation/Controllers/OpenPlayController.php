@@ -12,7 +12,7 @@ class OpenPlayController {
     private OpenPlayRepository $repo;
 
     public function __construct() {
-        $this->repo = new OpenPlayRepository();
+        $this->repo = new OpenPlayRepository(true);
     }
 
     public function getPaginatedDataTables(Request $request): void {

@@ -1,4 +1,12 @@
 .facility-mobile-bar,.facility-detail-tabs,.facility-court-filters,.facility-duration,.facility-slot-legend{display:none}
+.facility-court-content{padding:14px;min-width:0}
+.facility-court-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.facility-court-heading h4{min-width:0;overflow-wrap:anywhere}
+.facility-court-heading .badge-streetside{flex-shrink:0}
+.facility-court-details{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 12px;margin-top:8px;font-size:.85rem}
+.facility-court-surface{color:#52665d;line-height:1.45;overflow-wrap:anywhere}
+.facility-court-price{color:#08783e;white-space:nowrap;line-height:1.4}
+.facility-court-price small{font-size:.78em;font-weight:500;color:#52665d}
 @media(max-width:768px){
  .facility-mobile .court-item.selected .court-selected-indicator{display:none!important}
  .facility-mobile .court-item::after{content:none!important;display:none!important}
@@ -145,3 +153,29 @@
 .booking-review-terms{display:flex;align-items:flex-start;gap:12px;margin:20px 0;font-size:.78rem;line-height:1.6;color:#737b75}.booking-review-terms input{width:18px;height:18px;accent-color:#007333;flex-shrink:0;margin-top:3px}.booking-review-terms a{color:#007333;text-decoration:none}
 .booking-payment-brand.qrph{background:#eef8f1;color:#007333}.booking-payment-brand.cash{background:#eef8f1;color:#007333}
 @media(max-width:768px){.facility-mobile .facility-filter-empty{padding:28px 12px;margin:0;text-align:center;color:#728078;font-size:.85rem}.facility-mobile .facility-book-now[hidden]{display:none!important}}
+
+/* Keep the court description and price on separate, readable mobile rows. */
+@media(max-width:768px){
+  .facility-mobile .court-item .facility-court-content{padding:12px 12px 12px 2px!important}
+  .facility-mobile .court-item .facility-court-heading h4{font-size:.9rem!important;line-height:1.35!important;margin:0!important}
+  .facility-mobile #courts-list .court-item .facility-court-details{display:flex!important;flex-direction:column;align-items:flex-start;gap:3px;margin-top:4px!important;font-weight:400!important}
+  .facility-mobile .court-item .facility-court-surface{font-size:.75rem!important;line-height:1.45}
+  .facility-mobile .court-item .facility-court-price{font-size:.85rem;line-height:1.4}
+  .facility-mobile .court-item>div:nth-child(2){align-self:center;height:68px!important}
+}
+@media(max-width:360px){
+  .facility-mobile .court-item>div:nth-child(2){width:64px!important;flex-basis:64px!important;height:60px!important}
+}
+
+.facility-selection-hint{display:none}
+@media(max-width:768px){
+ body.facility-mobile.facility-schedule-view .facility-mobile-bar{position:relative!important;top:auto;left:auto;right:auto;min-height:52px!important;box-sizing:border-box;background:#063e2e}
+ .facility-schedule-view .facility-calendar{display:flex!important;width:100%;box-sizing:border-box;min-height:44px;margin-bottom:6px;color:#123b2c}
+ .facility-calendar>div{display:flex;gap:6px}
+ .facility-calendar button{min-width:40px;min-height:40px;border-radius:10px;background:#edf4ef}
+ .facility-schedule-view .facility-slot-legend{flex-wrap:wrap;gap:8px 14px;margin-bottom:8px}
+ .facility-schedule-view .facility-selection-hint{display:block;font-size:.75rem;line-height:1.5;color:#52665d;margin:0 0 16px}
+}
+
+.facility-mobile .slot-btn.time-passed{background:#edf0ee!important;color:#89938d!important;opacity:.65!important;cursor:not-allowed}
+@media(max-width:768px){.facility-mobile .slot-btn.time-passed>span{display:block!important;font-size:.62rem!important}}

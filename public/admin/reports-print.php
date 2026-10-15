@@ -13,7 +13,7 @@ $startDate = $_GET['start_date'] ?? date('Y-m-01');
 $endDate   = $_GET['end_date']   ?? date('Y-m-d');
 
 $role = Auth::role();
-$orgId = ($role === 'super_admin' || $role === 'platform_admin') ? null : Auth::organizationId();
+$orgId = ($role === 'super_admin' || $role === 'platform_admin') ? null : \App\Core\Auth\TenantScope::requireOrganization();
 
 $bookingRepo = new BookingRepository();
 $data = $bookingRepo->getComprehensiveAnalytics($orgId, $startDate, $endDate);

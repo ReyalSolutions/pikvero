@@ -31,7 +31,7 @@ $v           = time();   // cache-bust token
 $needsJquery = array_intersect(['jquery', 'select2', 'datatables'], $headExtras);
 ?>
 <!doctype html>
-<html lang="en">
+<html lang="en" <?= \App\Core\View\PortalTheme::attributes() ?>>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -51,6 +51,7 @@ $needsJquery = array_intersect(['jquery', 'select2', 'datatables'], $headExtras)
   <link rel="stylesheet" href="/pikvero/assets/css/toast.css?v=<?= $v ?>">
   <link rel="stylesheet" href="/pikvero/assets/css/modal.css?v=<?= $v ?>">
   <link rel="stylesheet" href="/pikvero/assets/css/loader.css?v=<?= $v ?>">
+  <?php require_once __DIR__ . '/portal-theme-assets.php'; ?>
 
 <?php if (in_array('datatables', $headExtras)): ?>
   <!-- DataTables -->

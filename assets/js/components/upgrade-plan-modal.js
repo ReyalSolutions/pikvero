@@ -107,7 +107,9 @@ const UpgradePlanModal = (function() {
     if (!container) return;
 
     const activeSub = currentSubData ? currentSubData.subscription : null;
-    const activePlanId = activeSub ? parseInt(activeSub.plan_id) : 0;
+    const end = activeSub?.current_period_end ? new Date(activeSub.current_period_end.slice(0, 10) + 'T23:59:59') : null;
+    const termActive = activeSub && ['active','trial','trialing'].includes(activeSub.status) && end && end >= new Date();
+    const activePlanId = termActive ? parseInt(activeSub.plan_id) : 0;
 
     if (!allPlans || allPlans.length === 0) {
       container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#5a7060; padding:20px;">No platform subscription plans configured yet.</div>`;
@@ -158,18 +160,7 @@ const UpgradePlanModal = (function() {
 
       const activeCycle = activeSub ? (activeSub.current_billing_cycle || 'monthly') : 'monthly';
       const isSameCycle = (activeCycle === billingCycle);
-      const isYearlyActive = (activeCycle === 'yearly');
-
-      if (!isFree && billingCycle === 'yearly' && activeCycle === 'monthly') {
-        const mVal = parseFloat(p.monthly_price) || 0;
-        if (mVal > 0) {
-          priceDisplay += `
-            <div style="font-size:0.72rem; color:var(--green); font-family:'DM Mono', monospace; margin-top:4px; font-weight:800;">
-              <i class="bi bi-tag-fill"></i> ₱${mVal.toFixed(2)} Monthly Credit Deducted!
-            </div>
-          `;
-        }
-      }
+      const isYearlyActive = termActive && (activeCycle === 'yearly');
 
       let actionButtonHtml = '';
       if (isYearlyActive && billingCycle === 'monthly') {

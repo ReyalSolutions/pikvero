@@ -11,6 +11,7 @@ $canDelete = Auth::can('products.delete');
 $canInventory = Auth::can('products.inventory');
 $canSell = Auth::can('products.sell');
 $canRevenue = Auth::can('products.revenue');
+$canReturn = Auth::can('products.inventory') && Auth::hasRole('court_owner', 'owner', 'super_admin', 'platform_admin');
 
 $facilityRepo = new FacilityRepository();
 $role = Auth::role();
@@ -18,14 +19,16 @@ $facilities = [];
 if ($role === 'super_admin' || $role === 'platform_admin') {
     $facilities = $facilityRepo->getAllActive();
 } else {
-    $orgId = Auth::organizationId();
-    if ($orgId) {
-        $facilities = $facilityRepo->findByOrganizationId($orgId);
+    $db = \App\Core\Database\Connection::getInstance();
+    if (Auth::hasRole('court_owner', 'owner')) {
+        $facilities = $db->select('SELECT f.id, f.name FROM facilities f JOIN organizations o ON o.id = f.organization_id WHERE o.owner_id = ? ORDER BY f.name', [(int)Auth::id()], 'i');
+    } else {
+        $facilities = $db->select('SELECT f.id, f.name FROM facilities f JOIN organization_users u ON u.organization_id = f.organization_id WHERE u.user_id = ? ORDER BY f.name', [(int)Auth::id()], 'i');
     }
 }
 ?>
 <!doctype html>
-<html lang="en">
+<html lang="en" <?= \App\Core\View\PortalTheme::attributes() ?>>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -101,8 +104,20 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
       box-shadow: none !important;
       cursor: not-allowed !important;
     }
+    .product-dialog { position:fixed;inset:0;margin:auto;padding:0;width:min(540px,calc(100% - 24px));max-height:calc(100dvh - 24px);border:2px solid var(--ink);border-radius:18px;background:var(--white);color:var(--ink);box-shadow:6px 6px 0 var(--ink);overflow:auto; }
+    .product-dialog::backdrop { background:rgba(13,33,29,.7);backdrop-filter:blur(5px); }
+    .product-dialog-header { display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;border-bottom:1px solid #e1e8e3; }
+    .product-dialog-header h2 { margin:0;font-size:1.05rem; }
+    .product-dialog-close { border:0;background:transparent;color:var(--ink);font-size:1.5rem;cursor:pointer;min-width:40px;min-height:40px; }
+    .product-dialog-body { padding:20px; }
+    .product-dialog-body p { margin:0;line-height:1.6;font-size:.9rem; }
+    .product-dialog-actions { display:flex;justify-content:flex-end;gap:10px;margin-top:20px;flex-wrap:wrap; }
+    #product-receipt-frame { border:0;width:100%;height:min(72dvh,740px);display:block;background:#f4f6f3; }
+    #product-receipt-frame[hidden] { display:none; }
+    #product-receipt-loading { padding:28px;text-align:center;color:#64756d; }
   </style>
 <?php require_once __DIR__ . '/../../includes/subscription-gate.php'; ?>
+  <?php require_once __DIR__ . '/../../includes/portal-theme-assets.php'; ?>
 </head>
 <body>
 
@@ -168,7 +183,7 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
           <i class="bi bi-box-seam-fill"></i> Product Inventory Catalog
         </button>
         <button type="button" id="tab-btn-sales" onclick="switchProductTab('sales')" class="button sand" style="padding:8px 16px; font-size:0.82rem;">
-          <i class="bi bi-receipt"></i> Sales &amp; Transaction Receipts
+          <i class="bi bi-receipt"></i> Sales &amp; Rentals
         </button>
       </div>
 
@@ -202,10 +217,11 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
               <tr style="border-bottom:2px solid var(--ink); text-align:left; font-family:'DM Mono', monospace; font-size:0.75rem; text-transform:uppercase;">
                 <th style="padding:10px;">RECEIPT &amp; DATE</th>
                 <th style="padding:10px;">CUSTOMER NAME</th>
-                <th style="padding:10px;">ITEM PURCHASED</th>
+                <th style="padding:10px;">ITEM SOLD / RENTED</th>
                 <th style="padding:10px;">QTY &amp; TOTAL</th>
                 <th style="padding:10px;">PAYMENT METHOD</th>
                 <th style="padding:10px;">FACILITY</th>
+                <th style="padding:10px;">RENTAL STATUS</th>
                 <th style="padding:10px; text-align:right;">ACTIONS</th>
               </tr>
             </thead>
@@ -233,8 +249,8 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
 
         <div style="margin-bottom:14px;">
           <label class="mono" style="display:block; margin-bottom:4px; font-size:0.75rem;">ASSIGNED FACILITY (OPTIONAL)</label>
-          <select id="prod-facility-id" style="width:100%; padding:9px 12px; border:2px solid var(--ink); border-radius:8px; font-weight:800; font-family:inherit;">
-            <option value="">All Facilities (Global)</option>
+          <select id="prod-facility-id" <?= Auth::hasRole('super_admin', 'platform_admin') ? '' : 'required' ?> style="width:100%; padding:9px 12px; border:2px solid var(--ink); border-radius:8px; font-weight:800; font-family:inherit;">
+            <option value=""><?= Auth::hasRole('super_admin', 'platform_admin') ? 'All Facilities (Global)' : 'Select your facility' ?></option>
             <?php foreach ($facilities as $fac): ?>
               <option value="<?= $fac['id'] ?>"><?= htmlspecialchars($fac['name']) ?> (<?= htmlspecialchars($fac['city'] ?? 'Bohol') ?>)</option>
             <?php endforeach; ?>
@@ -338,11 +354,34 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
 
         <div style="display:flex; justify-content:flex-end; gap:8px;">
           <button type="button" onclick="closeModal('sell-modal')" class="button sand" style="padding:8px 14px; font-size:0.8rem;">Cancel</button>
-          <button type="submit" class="button lime" style="padding:8px 18px; font-size:0.8rem;"><i class="bi bi-cash"></i> Complete Sale</button>
+        <button type="submit" id="sell-submit-btn" class="button lime" style="padding:8px 18px; font-size:0.8rem;"><i class="bi bi-cash"></i> Complete Sale</button>
         </div>
       </form>
     </div>
   </div>
+
+  <dialog id="product-receipt-dialog" class="product-dialog" aria-labelledby="product-receipt-title">
+    <div class="product-dialog-header">
+      <h2 id="product-receipt-title"><i class="bi bi-receipt"></i> Sale / Rental Receipt</h2>
+      <button type="button" class="product-dialog-close" aria-label="Close receipt" onclick="closeReceiptModal()">&times;</button>
+    </div>
+    <p id="product-receipt-loading" role="status">Loading receipt…</p>
+    <iframe id="product-receipt-frame" title="Sale or rental receipt" hidden onload="receiptModalLoaded()"></iframe>
+  </dialog>
+
+  <dialog id="rental-return-dialog" class="product-dialog" aria-labelledby="rental-return-title" aria-describedby="rental-return-message">
+    <div class="product-dialog-header">
+      <h2 id="rental-return-title"><i class="bi bi-arrow-return-left"></i> Mark rental as returned?</h2>
+      <button type="button" class="product-dialog-close" aria-label="Close confirmation" onclick="closeRentalReturnModal()">&times;</button>
+    </div>
+    <div class="product-dialog-body">
+      <p id="rental-return-message">Its rented quantity will become available again.</p>
+      <div class="product-dialog-actions">
+        <button type="button" class="button sand" onclick="closeRentalReturnModal()" autofocus>Cancel</button>
+        <button type="button" id="rental-return-confirm" class="button lime" onclick="confirmRentalReturn()"><i class="bi bi-check-circle"></i> Mark returned</button>
+      </div>
+    </div>
+  </dialog>
 
   <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
   <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
@@ -359,6 +398,7 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
     const canEdit = <?= json_encode($canEdit) ?>;
     const canSell = <?= json_encode($canSell) ?>;
     const canDelete = <?= json_encode($canDelete) ?>;
+    const canReturn = <?= json_encode($canReturn) ?>;
 
     document.addEventListener('DOMContentLoaded', async () => {
       await NavbarComponent.render('#navbar-container', true);
@@ -444,7 +484,7 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
                 <div style="display:flex; gap:6px; justify-content:flex-end;">
                   ${canSell ? `
                     <button type="button" onclick="openSellModal(${row.id})" class="button lime" style="padding:5px 10px; font-size:0.75rem;" title="Process Sale / Rental">
-                      <i class="bi bi-cash"></i> Sell
+                      <i class="bi bi-cash"></i> ${row.type === 'rental' ? 'Rent' : 'Sell'}
                     </button>
                   ` : ''}
                   ${canEdit ? `
@@ -549,14 +589,23 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
                 }
               },
               {
+                data: 'rental_status',
+                render: function (data, type, row) {
+                  if (row.type !== 'rental') return '<span style="color:#64756d;">Sale</span>';
+                  if (data === 'returned') return '<span class="badge-streetside green">Returned</span><div style="font-size:.7rem;margin-top:4px;">' + (row.returned_at || '') + '</div>';
+                  return '<span class="badge-streetside sky">Rented out</span>' + (Number(row.rental_stock_deducted) === 0 ? '<div style="font-size:.7rem;margin-top:4px;">Legacy rental • stock already available</div>' : '');
+                }
+              },
+              {
                 data: null,
                 orderable: false,
                 render: function (data, type, row) {
                   return `
-                    <div style="display:flex; justify-content:flex-end;">
-                      <a href="/pikvero/public/product-receipt.php?sale_id=${row.id}" target="_blank" class="button lime" style="padding:5px 10px; font-size:0.75rem;" title="Print Official Receipt">
-                        <i class="bi bi-printer-fill"></i> Print Receipt
-                      </a>
+                    <div style="display:flex; justify-content:flex-end;gap:6px;flex-wrap:wrap;">
+                      ${canReturn && row.type === 'rental' && row.rental_status === 'rented' ? `<button type="button" class="button sky" style="padding:5px 10px;font-size:.75rem;" onclick="markRentalReturned(${row.id}, this, ${Number(row.rental_stock_deducted) === 1})"><i class="bi bi-arrow-return-left"></i> Mark returned</button>` : ''}
+                      <button type="button" onclick="openReceiptModal(${row.id})" class="button lime" style="padding:5px 10px; font-size:0.75rem;" title="View receipt">
+                        <i class="bi bi-receipt"></i> View Receipt
+                      </button>
                     </div>
                   `;
                 }
@@ -693,11 +742,79 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
           document.getElementById('sell-item-stock').innerText = selectedSellProduct.stock_quantity;
           document.getElementById('sell-customer-name').value = 'Walk-in Customer';
           document.getElementById('sell-quantity').value = 1;
+          document.getElementById('sell-quantity').max = selectedSellProduct.stock_quantity;
+          document.getElementById('sell-submit-btn').innerHTML = selectedSellProduct.type === 'rental' ? '<i class="bi bi-box-arrow-up-right"></i> Issue Rental' : '<i class="bi bi-cash"></i> Complete Sale';
           updateSellTotal();
           openModal('sell-modal');
         }
       } catch (err) { console.error(err); }
     }
+
+    let pendingRentalReturn = null;
+    function markRentalReturned(saleId, button, restoresStock = true) {
+      if (button.disabled) return;
+      pendingRentalReturn = {saleId, button};
+      document.getElementById('rental-return-message').textContent = restoresStock
+        ? 'Its rented quantity will become available again. The rental will be marked as returned.'
+        : 'This older rental will be marked as returned. Its stock is already available and will stay unchanged.';
+      document.getElementById('rental-return-dialog').showModal();
+    }
+    function closeRentalReturnModal() {
+      if (document.getElementById('rental-return-confirm').disabled) return;
+      document.getElementById('rental-return-dialog').close();
+      pendingRentalReturn = null;
+    }
+    async function confirmRentalReturn() {
+      if (!pendingRentalReturn) return;
+      const confirmButton = document.getElementById('rental-return-confirm');
+      if (confirmButton.disabled) return;
+      const {saleId, button} = pendingRentalReturn;
+      confirmButton.disabled = true;
+      button.disabled = true;
+      try {
+        const res = await Api.post('/pikvero/api/admin/products.php?action=return_rental', {sale_id: saleId});
+        document.getElementById('rental-return-dialog').close();
+        pendingRentalReturn = null;
+        Toast.success('Rental returned', res.message);
+        salesHistoryTable?.ajax.reload(null, false);
+        productsTable?.ajax.reload(null, false);
+        await loadMetrics();
+      } catch (error) { console.error(error); }
+      finally {
+        confirmButton.disabled = false;
+        if (button.isConnected) button.disabled = false;
+      }
+    }
+    function openReceiptModal(saleId) {
+      if (!Number.isInteger(Number(saleId)) || Number(saleId) <= 0) return;
+      const frame = document.getElementById('product-receipt-frame');
+      frame.hidden = true;
+      document.getElementById('product-receipt-loading').hidden = false;
+      frame.src = '/pikvero/public/product-receipt.php?sale_id=' + Number(saleId) + '&embedded=1';
+      const dialog = document.getElementById('product-receipt-dialog');
+      if (!dialog.open) dialog.showModal();
+    }
+    function receiptModalLoaded() {
+      const dialog = document.getElementById('product-receipt-dialog');
+      if (!dialog.open) return;
+      const frame = document.getElementById('product-receipt-frame');
+      frame.hidden = false;
+      document.getElementById('product-receipt-loading').hidden = true;
+      // Escape also closes the preview while keyboard focus is inside the receipt frame.
+      try { frame.contentDocument.addEventListener('keydown', event => {
+        if (event.key === 'Escape') { event.preventDefault(); closeReceiptModal(); }
+      });
+        frame.contentWindow.PortalTheme?.apply(document.documentElement.dataset.portalTheme || 'light');
+      } catch (error) { console.warn('Receipt preview unavailable', error); }
+    }
+    function closeReceiptModal() { document.getElementById('product-receipt-dialog').close(); }
+    document.getElementById('product-receipt-dialog').addEventListener('close', () => {
+      document.getElementById('product-receipt-frame').removeAttribute('src');
+    });
+    document.getElementById('rental-return-dialog').addEventListener('cancel', event => {
+      if (document.getElementById('rental-return-confirm').disabled) event.preventDefault();
+      else pendingRentalReturn = null;
+    });
 
     function updateSellTotal() {
       if (!selectedSellProduct) return;
@@ -718,13 +835,14 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
       try {
         const res = await Api.post('/pikvero/api/admin/products.php?action=sell', payload);
         if (res.success) {
-          Toast.success('Sale Processed', 'Product sale completed successfully.');
+          Toast.success(selectedSellProduct?.type === 'rental' ? 'Rental issued' : 'Sale processed', selectedSellProduct?.type === 'rental' ? 'Rental recorded and available stock updated.' : 'Product sale completed successfully.');
+          if (salesHistoryTable) salesHistoryTable.ajax.reload(null, false);
           closeModal('sell-modal');
           productsTable.ajax.reload(null, false);
           loadMetrics();
 
           if (res.data && res.data.sale_id) {
-            window.open(`/pikvero/public/product-receipt.php?sale_id=${res.data.sale_id}`, '_blank');
+            openReceiptModal(Number(res.data.sale_id));
           }
         }
       } catch (err) { console.error(err); }

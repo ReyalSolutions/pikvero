@@ -33,41 +33,24 @@ class Auth {
     }
 
     public static function organizationId(): ?int {
-        $orgId = Session::get('organization_id');
-        if (($orgId === null || (int)$orgId <= 0) && self::check()) {
-            $userId = self::id();
-            if ($userId) {
-                try {
-                    $db = Connection::getInstance();
-                    // 1. Check if user owns an organization
-                    $org = $db->selectOne("SELECT id FROM organizations WHERE owner_id = ? LIMIT 1", [$userId], 'i');
-                    if ($org && !empty($org['id'])) {
-                        $orgId = (int)$org['id'];
-                    } else {
-                        // 2. Check if user is linked to an organization via facilities
-                        $fac = $db->selectOne("SELECT organization_id FROM facilities WHERE organization_id IS NOT NULL ORDER BY id ASC LIMIT 1");
-                        if ($fac && !empty($fac['organization_id'])) {
-                            $orgId = (int)$fac['organization_id'];
-                        }
-                    }
-
-                    // 3. Fallback to first organization in database
-                    if (!$orgId) {
-                        $firstOrg = $db->selectOne("SELECT id FROM organizations ORDER BY id ASC LIMIT 1");
-                        if ($firstOrg && !empty($firstOrg['id'])) {
-                            $orgId = (int)$firstOrg['id'];
-                        } else {
-                            $orgId = 1;
-                        }
-                    }
-
-                    if ($orgId > 0) {
-                        Session::set('organization_id', $orgId);
-                    }
-                } catch (\Throwable $e) {}
-            }
+        if (!self::check()) return null;
+        $db = Connection::getInstance();
+        $userId = (int)self::id();
+        $requested = (int)Session::get('organization_id', 0);
+        if (self::hasRole('court_owner', 'owner')) {
+            $rows = $db->select('SELECT id FROM organizations WHERE owner_id = ? ORDER BY id', [$userId], 'i');
+        } elseif (self::hasRole('super_admin', 'platform_admin')) {
+            $org = $requested > 0
+                ? $db->selectOne('SELECT id FROM organizations WHERE id = ?', [$requested], 'i')
+                : $db->selectOne('SELECT id FROM organizations ORDER BY id LIMIT 1');
+            return $org ? (int)$org['id'] : null;
+        } else {
+            $rows = $db->select('SELECT organization_id AS id FROM organization_users WHERE user_id = ? ORDER BY organization_id', [$userId], 'i');
         }
-        return $orgId ? (int)$orgId : null;
+        $allowed = array_map('intval', array_column($rows, 'id'));
+        $orgId = in_array($requested, $allowed, true) ? $requested : ($allowed[0] ?? null);
+        Session::set('organization_id', $orgId);
+        return $orgId;
     }
 
     public static function logout(): void {

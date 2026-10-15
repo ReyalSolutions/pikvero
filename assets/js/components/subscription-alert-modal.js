@@ -39,7 +39,7 @@ const SubscriptionAlertModal = {
                 MONTHLY BILLING
               </button>
               <button type="button" id="sam-cycle-yearly" onclick="SubscriptionAlertModal.setCycle('yearly')" class="button sand" style="padding:6px 18px; font-size:0.78rem; font-weight:900;">
-                YEARLY BILLING <span class="badge-streetside green" style="font-size:0.6rem; margin-left:4px;">SAVE 17%</span>
+                YEARLY BILLING <span class="badge-streetside green" style="font-size:0.6rem; margin-left:4px;">YEARLY</span>
               </button>
             </div>
 
@@ -58,8 +58,8 @@ const SubscriptionAlertModal = {
               </div>
 
               <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:6px; color:#5a7060;">
-                <span>Tax &amp; Gateway Fees</span>
-                <span style="font-family:'DM Mono', monospace; font-weight:700;">₱0.00 (INCLUDED)</span>
+                <span>Platform &amp; processing fees</span>
+                <span id="sam-inv-fees" style="font-family:'DM Mono', monospace; font-weight:700;">₱0.00</span>
               </div>
 
               <div style="display:flex; justify-content:space-between; font-size:1.1rem; font-weight:900; margin-top:10px; padding-top:10px; border-top:2px dashed var(--ink);">
@@ -179,8 +179,8 @@ const SubscriptionAlertModal = {
       return;
     }
 
-    if (!this.selectedPlanId) {
-      this.selectedPlanId = parseInt(plans[0].id);
+    if (!plans.some(p => Number(p.id) === Number(this.selectedPlanId))) {
+      this.selectedPlanId = Number(plans.find(p => Number(p.id) === Number(this.currentStatusData?.subscription?.plan_id))?.id || plans[0].id);
     }
 
     container.innerHTML = plans.map(p => {
@@ -213,7 +213,10 @@ const SubscriptionAlertModal = {
 
       if (planNameEl) planNameEl.textContent = `${selPlan.name} Plan (${this.selectedCycle.toUpperCase()})`;
       if (subtotalEl) subtotalEl.textContent = `₱${finalPrice.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
-      if (totalEl) totalEl.textContent = `₱${finalPrice.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+      const fees = Math.round(finalPrice * .02 * 100) / 100 + Math.round(finalPrice * .025 * 100) / 100;
+      const feesEl = document.getElementById('sam-inv-fees');
+      if (feesEl) feesEl.textContent = `₱${fees.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+      if (totalEl) totalEl.textContent = `₱${(finalPrice + fees).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
     }
   },
 

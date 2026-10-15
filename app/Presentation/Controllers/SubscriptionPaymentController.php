@@ -41,18 +41,7 @@ class SubscriptionPaymentController {
             return null; // Platform wide view
         }
 
-        $userId = Auth::id();
-        if (!$userId) return null;
-
-        $orgId = Auth::organizationId();
-        if (!$orgId || $orgId <= 0) {
-            $db = \App\Core\Database\Connection::getInstance();
-            $org = $db->selectOne("SELECT id FROM organizations WHERE owner_id = ? LIMIT 1", [$userId]);
-            if ($org) {
-                $orgId = (int)$org['id'];
-            }
-        }
-        return $orgId;
+        return \App\Core\Auth\TenantScope::requireOrganization();
     }
 
     public function getSubscriptionPayments(Request $request): void {

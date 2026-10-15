@@ -103,6 +103,7 @@ class AuthController {
             'permissions' => Auth::permissions(),
             'organization_id' => Auth::organizationId(),
             'settings' => [
+                'theme_mode' => \App\Core\View\PortalTheme::context()['mode'],
                 'app_name' => $appName,
                 'org_name' => $orgName,
                 'org_logo_url' => $logoUrl,

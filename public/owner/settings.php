@@ -67,6 +67,7 @@ require_once __DIR__ . '/../../includes/head.php';
 
       <div class="card-streetside" style="padding:32px; background:var(--white);">
         <form id="owner-settings-form" onsubmit="event.preventDefault(); submitSaveOwnerSettings();">
+          <?php require __DIR__ . '/../../includes/portal-theme-picker.php'; ?>
           
           <h3 style="font-size:1.1rem; font-weight:800; text-transform:uppercase; margin-bottom:18px; border-bottom:1px solid var(--line); padding-bottom:8px;">
             ORGANIZATION LOGO &amp; APP DISPLAY TITLE
@@ -166,6 +167,7 @@ require_once __DIR__ . '/../../includes/head.php';
         const res = await Api.get('/pikvero/api/owner/settings.php');
         if (res.success && res.data) {
           const org = res.data;
+          window.PortalTheme?.apply(org.theme_mode || 'light');
           document.getElementById('set-name').value = org.name || '';
           document.getElementById('set-app_title').value = org.app_title || '';
           document.getElementById('set-logo_url').value = org.logo_url || '';
@@ -226,6 +228,7 @@ require_once __DIR__ . '/../../includes/head.php';
 
     async function submitSaveOwnerSettings() {
       const payload = {
+        theme_mode: document.querySelector('[name="theme_mode"]:checked')?.value || 'light',
         name: document.getElementById('set-name').value.trim(),
         app_title: document.getElementById('set-app_title').value.trim(),
         logo_url: document.getElementById('set-logo_url').value.trim(),

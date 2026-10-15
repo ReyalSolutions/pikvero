@@ -24,7 +24,7 @@ class CalendarController {
         $role = Auth::role();
         $orgId = null;
         if ($role !== 'super_admin' && $role !== 'platform_admin') {
-            $orgId = Auth::organizationId();
+            $orgId = \App\Core\Auth\TenantScope::requireOrganization();
         }
 
         $startDate = $startStr ? date('Y-m-d', strtotime($startStr)) : date('Y-m-01');
@@ -34,7 +34,7 @@ class CalendarController {
 
         // 1. Fetch Court Bookings
         if ($eventType === 'all' || $eventType === 'booking') {
-            $bookingWhere = ["b.booking_date BETWEEN ? AND ?", "b.booking_status != 'cancelled'"];
+            $bookingWhere = ["b.booking_date BETWEEN ? AND ?", "b.booking_status != 'cancelled'", \App\Core\Auth\TenantScope::facilitySql('c.facility_id')];
             $bParams = [$startDate, $endDate];
             $bTypes = "ss";
 
@@ -110,7 +110,7 @@ class CalendarController {
 
         // 2. Fetch Open Play Sessions
         if ($eventType === 'all' || $eventType === 'open_play') {
-            $opWhere = ["s.session_date BETWEEN ? AND ?", "s.status != 'cancelled'"];
+            $opWhere = ["s.session_date BETWEEN ? AND ?", "s.status != 'cancelled'", \App\Core\Auth\TenantScope::facilitySql('s.facility_id')];
             $opParams = [$startDate, $endDate];
             $opTypes = "ss";
 

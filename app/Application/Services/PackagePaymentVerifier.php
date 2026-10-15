@@ -8,12 +8,13 @@ class PackagePaymentVerifier {
         Connection::getInstance()->execute('INSERT INTO package_checkouts (reference,provider_id,session_hash,user_id,plan_id,billing_cycle,amount_centavos) VALUES (?,?,?,?,?,?,?)',[$reference,$provider,hash('sha256',session_id()),Auth::id(),$plan,$cycle,$amount],'sssiisi');
     }
     // Call inside the activation transaction. Lock prevents receipt reuse.
-    public static function verify(string $reference,int $plan,string $cycle): array {
+    public static function verify(string $reference,int $plan,string $cycle,bool $allowConsumed = false): array {
         $db=Connection::getInstance();
         $row=$db->selectOne('SELECT *, (created_at>=DATE_SUB(NOW(),INTERVAL 1 DAY)) AS fresh FROM package_checkouts WHERE reference=? FOR UPDATE',[$reference],'s');
-        if(!$row || !hash_equals($row['session_hash'],hash('sha256',session_id())) || ($row['user_id'] && (int)$row['user_id']!==(int)Auth::id()) || (int)$row['plan_id']!==$plan || $row['billing_cycle']!==$cycle || $row['consumed_at'] || !$row['fresh']){
+        if(!$row || !hash_equals($row['session_hash'],hash('sha256',session_id())) || ($row['user_id'] && (int)$row['user_id']!==(int)Auth::id()) || (int)$row['plan_id']!==$plan || $row['billing_cycle']!==$cycle || (!$allowConsumed && $row['consumed_at']) || !$row['fresh']){
             throw new \RuntimeException('Invalid, expired, or already used package checkout. Start checkout again.');
         }
+        if ($allowConsumed && $row['consumed_at']) { $row['already_activated'] = true; return $row; }
         if((int)$row['amount_centavos']===0)return $row;
         if(!$row['provider_id'] || !function_exists('curl_init'))throw new \RuntimeException('Package payment cannot be verified.');
         $settings=(new SystemSettingRepository())->getAllAsMap();

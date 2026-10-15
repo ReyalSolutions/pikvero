@@ -1,25 +1,9 @@
 /**
  * Dashboard Sidebar Component for Pikvero (Full 100vh Fixed Layout)
  * Dynamically filters sidebar navigation links strictly based on module RBAC permissions,
- * grouped into interactive Streetside dropdown category menus.
+ * organized under permanent, readable section headings.
  */
 const SidebarComponent = {
-  /**
-   * Toggle expandable submenu dropdowns
-   * @param {string} groupKey Menu group identifier
-   */
-  toggleSubmenu(groupKey) {
-    const submenu = document.getElementById(`submenu-${groupKey}`);
-    const arrow = document.getElementById(`arrow-${groupKey}`);
-    if (submenu) {
-      const isOpen = submenu.style.display !== 'none';
-      submenu.style.display = isOpen ? 'none' : 'flex';
-      if (arrow) {
-        arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
-      }
-    }
-  },
-
   render(activeKey = 'dashboard', portalType = 'admin', selector = '#sidebar-container') {
     if (portalType === 'customer') {
       document.body.classList.add('customer-portal');
@@ -52,6 +36,7 @@ const SidebarComponent = {
     const role = user ? (user.role || (user.user ? user.user.role_name : '')) : '';
     const perms = (user && user.permissions) ? user.permissions : [];
     const isSuperAdmin = (role === 'super_admin');
+    const isOwnerPortal = portalType === 'owner' || ['court_owner', 'owner'].includes(role);
 
     const hasAnyPerm = (...requiredPerms) => {
       if (isSuperAdmin) return true;
@@ -98,7 +83,7 @@ const SidebarComponent = {
           icon: 'bi-building-fill-add'
         },
         {
-          type: 'dropdown',
+          type: 'group',
           groupKey: 'about_support',
           label: 'About & Support',
           icon: 'bi-info-circle-fill',
@@ -118,7 +103,7 @@ const SidebarComponent = {
           icon: 'bi-grid-1x2-fill'
         },
         {
-          type: 'dropdown',
+          type: 'group',
           groupKey: 'court_bookings',
           label: 'Court Bookings',
           icon: 'bi-ticket-detailed-fill',
@@ -150,18 +135,18 @@ const SidebarComponent = {
           type: 'single',
           key: 'dashboard',
           label: 'Overview',
-          link: portalType === 'owner' ? '/pikvero/public/owner/dashboard.php' : '/pikvero/public/admin/dashboard.php',
+          link: isOwnerPortal ? '/pikvero/public/owner/dashboard.php' : '/pikvero/public/admin/dashboard.php',
           icon: 'bi-grid-1x2-fill'
         });
       }
 
-      // 2. Venue Management Dropdown Group (Facilities, Courts)
+      // 2. Venue Management Group (Facilities, Courts)
       const venueItems = [];
       if (hasAnyPerm('facility.view', 'facilities.view', 'facilities.manage', 'system.manage')) {
         venueItems.push({
           key: 'facilities',
-          label: portalType === 'owner' ? 'My Facilities' : 'Facilities',
-          link: portalType === 'owner' ? '/pikvero/public/owner/facilities.php' : '/pikvero/public/admin/facilities.php',
+          label: isOwnerPortal ? 'My Facilities' : 'Facilities',
+          link: isOwnerPortal ? '/pikvero/public/owner/facilities.php' : '/pikvero/public/admin/facilities.php',
           icon: 'bi-building-fill'
         });
       }
@@ -169,7 +154,7 @@ const SidebarComponent = {
         venueItems.push({
           key: 'courts',
           label: 'Court Manager',
-          link: portalType === 'owner' ? '/pikvero/public/owner/courts.php' : '/pikvero/public/admin/courts.php',
+          link: isOwnerPortal ? '/pikvero/public/owner/courts.php' : '/pikvero/public/admin/courts.php',
           icon: 'bi-layers-fill'
         });
       }
@@ -191,7 +176,7 @@ const SidebarComponent = {
       }
       if (venueItems.length > 0) {
         menuStructure.push({
-          type: 'dropdown',
+          type: 'group',
           groupKey: 'venue',
           label: 'Venue Management',
           icon: 'bi-building-gear',
@@ -199,7 +184,7 @@ const SidebarComponent = {
         });
       }
 
-      // 3. Operations & Analytics Dropdown Group (Bookings, Reports)
+      // 3. Operations & Analytics Group (Bookings, Reports)
       const opsItems = [];
       if (hasAnyPerm('calendar.view', 'booking.view', 'system.manage')) {
         opsItems.push({
@@ -213,7 +198,7 @@ const SidebarComponent = {
         opsItems.push({
           key: 'bookings',
           label: 'Reservations',
-          link: portalType === 'owner' ? '/pikvero/public/owner/bookings.php' : '/pikvero/public/admin/bookings.php',
+          link: isOwnerPortal ? '/pikvero/public/owner/bookings.php' : '/pikvero/public/admin/bookings.php',
           icon: 'bi-calendar-check-fill'
         });
       }
@@ -229,7 +214,7 @@ const SidebarComponent = {
         opsItems.push({
           key: 'payments',
           label: 'Payments',
-          link: portalType === 'owner' ? '/pikvero/public/owner/payments.php' : '/pikvero/public/admin/payments.php',
+          link: isOwnerPortal ? '/pikvero/public/owner/payments.php' : '/pikvero/public/admin/payments.php',
           icon: 'bi-credit-card-2-front-fill'
         });
       }
@@ -237,19 +222,19 @@ const SidebarComponent = {
         opsItems.push({
           key: 'payouts',
           label: 'GCash Payouts',
-          link: portalType === 'owner' ? '/pikvero/public/owner/payouts.php' : '/pikvero/public/admin/payouts.php',
+          link: isOwnerPortal ? '/pikvero/public/owner/payouts.php' : '/pikvero/public/admin/payouts.php',
           icon: 'bi-wallet-fill'
         });
       }
       if (hasAnyPerm('reports.view', 'report.view', 'reports.financial', 'system.manage')) {
         opsItems.push({
           key: 'reports',
-          label: portalType === 'owner' ? 'Analytics' : 'Revenue Analytics',
-          link: portalType === 'owner' ? '/pikvero/public/owner/reports.php' : '/pikvero/public/admin/reports.php',
+          label: isOwnerPortal ? 'Analytics' : 'Revenue Analytics',
+          link: isOwnerPortal ? '/pikvero/public/owner/reports.php' : '/pikvero/public/admin/reports.php',
           icon: 'bi-graph-up-arrow'
         });
       }
-      if (portalType === 'owner') {
+      if (isOwnerPortal) {
         opsItems.push({
           key: 'feedback',
           label: 'Feedback & Bug Reports',
@@ -259,7 +244,7 @@ const SidebarComponent = {
       }
       if (opsItems.length > 0) {
         menuStructure.push({
-          type: 'dropdown',
+          type: 'group',
           groupKey: 'operations',
           label: 'Operations',
           icon: 'bi-card-checklist',
@@ -267,28 +252,28 @@ const SidebarComponent = {
         });
       }
 
-      // 4. Platform Administration Dropdown Group (Subscriptions, Users, Logs, Settings)
+      // 4. Platform Administration Group (Subscriptions, Users, Logs, Settings)
       const adminItems = [];
       if (hasAnyPerm('subscriptions.view', 'subscriptions.manage', 'subscription.view', 'subscription.manage', 'plans.manage', 'system.manage')) {
         adminItems.push({
           key: 'subscriptions',
-          label: portalType === 'owner' ? 'My Plan' : 'Subscription Plans',
-          link: portalType === 'owner' ? '/pikvero/public/owner/my-plan.php' : '/pikvero/public/admin/subscriptions.php',
+          label: isOwnerPortal ? 'My Plan' : 'Subscription Plans',
+          link: isOwnerPortal ? '/pikvero/public/owner/my-plan.php' : '/pikvero/public/admin/subscriptions.php',
           icon: 'bi-award-fill'
         });
       }
       if (hasAnyPerm('subscription_payments.view', 'subscription_payments.manage', 'system.manage')) {
         adminItems.push({
           key: 'subscription-payments',
-          label: portalType === 'owner' ? 'Plan Payments' : 'Sub Payments',
-          link: portalType === 'owner' ? '/pikvero/public/owner/subscription-payments.php' : '/pikvero/public/admin/subscription-payments.php',
+          label: isOwnerPortal ? 'Plan Payments' : 'Sub Payments',
+          link: isOwnerPortal ? '/pikvero/public/owner/subscription-payments.php' : '/pikvero/public/admin/subscription-payments.php',
           icon: 'bi-receipt-cutoff'
         });
       }
       if (hasAnyPerm('users.view', 'users.manage', 'roles.manage', 'permissions.manage', 'system.manage')) {
         adminItems.push({
           key: 'users',
-          label: 'User Directory',
+          label: isOwnerPortal ? 'Team & Customers' : 'User Directory',
           link: '/pikvero/public/admin/users.php',
           icon: 'bi-people-fill'
         });
@@ -304,12 +289,12 @@ const SidebarComponent = {
       if (hasAnyPerm('settings.manage', 'organization.update', 'system.manage')) {
         adminItems.push({
           key: 'settings',
-          label: portalType === 'owner' ? 'Org Branding' : 'Security & Settings',
-          link: portalType === 'owner' ? '/pikvero/public/owner/settings.php' : '/pikvero/public/admin/settings.php',
-          icon: portalType === 'owner' ? 'bi-palette-fill' : 'bi-gear-fill'
+          label: isOwnerPortal ? 'Org Branding' : 'Security & Settings',
+          link: isOwnerPortal ? '/pikvero/public/owner/settings.php' : '/pikvero/public/admin/settings.php',
+          icon: isOwnerPortal ? 'bi-palette-fill' : 'bi-gear-fill'
         });
       }
-      if (portalType !== 'owner') {
+      if (!isOwnerPortal) {
         adminItems.push({
           key: 'feedback_reports',
           label: 'Bug & Feature Reports',
@@ -323,7 +308,7 @@ const SidebarComponent = {
       adminItems.push({key:'notifications',label:'Notifications',link:'/pikvero/public/notifications.php',icon:'bi-bell'});
       if (adminItems.length > 0) {
         menuStructure.push({
-          type: 'dropdown',
+          type: 'group',
           groupKey: 'administration',
           label: 'Settings',
           icon: 'bi-sliders2',
@@ -333,51 +318,38 @@ const SidebarComponent = {
     }
 
     // Build Navigation HTML
-    if (AuthHelper.currentUser?.user) {
+    if (user?.user) {
       menuStructure.push({type:'single',key:'referrals',label:'Referral Bonuses',link:portalType==='customer'?'/pikvero/public/customer/referrals.php':'/pikvero/public/admin/referrals.php',icon:'bi-gift-fill'});
     }
-    if (['super_admin','platform_admin'].includes(AuthHelper.currentUser?.role)) {
+    if (['super_admin','platform_admin'].includes(role)) {
       menuStructure.push({type:'single',key:'security',label:'Security Monitor',link:'/pikvero/public/admin/security.php',icon:'bi-shield-lock'});
       menuStructure.push({type:'single',key:'page-visits',label:'Page Visits',link:'/pikvero/public/admin/page-visits.php',icon:'bi-bar-chart-line'});
     }
-    let navListHtml = menuStructure.map(group => {
-      if (group.type === 'single') {
-        const isActive = (activeKey === group.key);
-        return `
-          <a href="${group.link}" onclick="if (typeof PageLoader !== 'undefined') PageLoader.show('Loading ${group.label.replace(/'/g, "\\'")}...');" class="button ${isActive ? 'coral' : 'sand'}" style="justify-content:flex-start; width:100%; border-radius:12px; margin-bottom:6px; padding:10px 14px; font-size:0.85rem; box-shadow: 2px 2px 0 var(--ink);">
-            <i class="bi ${group.icon}"></i>
-            <span>${group.label}</span>
-          </a>
-        `;
-      } else if (group.type === 'dropdown') {
-        const isGroupActive = group.items.some(item => item.key === activeKey);
-        const childrenHtml = group.items.map(item => {
-          const isItemActive = (activeKey === item.key);
-          return `
-            <a href="${item.link}" onclick="if (typeof PageLoader !== 'undefined') PageLoader.show('Loading ${item.label.replace(/'/g, "\\'")}...');" class="button ${isItemActive ? 'coral' : 'lime'}" style="justify-content:flex-start; width:100%; border-radius:10px; padding:8px 12px; font-size:0.80rem; box-shadow: 2px 2px 0 var(--ink);">
-              <i class="bi ${item.icon}"></i>
-              <span>${item.label}</span>
-            </a>
-          `;
-        }).join('');
-
-        return `
-          <div style="margin-bottom:6px;">
-            <button type="button" onclick="SidebarComponent.toggleSubmenu('${group.groupKey}')" class="button ${isGroupActive ? 'coral' : 'sand'}" style="justify-content:space-between; width:100%; border-radius:12px; padding:10px 14px; font-size:0.85rem; box-shadow: 2px 2px 0 var(--ink); cursor:pointer;">
-              <div style="display:flex; align-items:center; gap:8px;">
-                <i class="bi ${group.icon}"></i>
-                <span style="font-weight:800;">${group.label}</span>
-              </div>
-              <i class="bi bi-chevron-down" id="arrow-${group.groupKey}" style="font-size:0.75rem; transition:transform 0.25s ease; ${isGroupActive ? 'transform:rotate(180deg);' : ''}"></i>
-            </button>
-            <div id="submenu-${group.groupKey}" style="display:${isGroupActive ? 'flex' : 'none'}; flex-direction:column; gap:4px; padding-left:14px; margin-top:4px; margin-bottom:4px; border-left:2px dashed var(--ink); margin-left:8px;">
-              ${childrenHtml}
-            </div>
-          </div>
-        `;
-      }
-      return '';
-    }).join('');
+    if (portalType !== 'guest' && portalType !== 'customer') {
+      const links = menuStructure.flatMap(group => group.items || [group]);
+      const sections = [
+        ['Workspace', ['dashboard']],
+        ['Facilities & courts', ['facilities', 'courts', 'amenities']],
+        ['Bookings & play', ['calendar', 'bookings', 'open-play']],
+        ['Sales & finances', ['products', 'payments', 'payouts', 'reports']],
+        ['Account & team', ['subscriptions', 'subscription-payments', 'users', 'settings', 'referrals']],
+        ['Communication & support', ['notifications', 'announcements', 'feedback', 'feedback_reports']],
+        ['Platform administration', ['logs', 'security', 'page-visits']]
+      ];
+      menuStructure = sections.map(([label, keys], index) => ({
+        type: 'group', groupKey: 'section-' + index, label,
+        items: keys.map(key => links.find(link => link.key === key)).filter(Boolean)
+      })).filter(group => group.items.length);
+    }
+    const renderLink = item => {
+      const active = activeKey === item.key || (activeKey === 'open_play' && item.key === 'open-play');
+      return `<a href="${item.link}" class="sidebar-nav-link${active ? ' is-active' : ''}"${active ? ' aria-current="page"' : ''}><i class="bi ${item.icon}" aria-hidden="true"></i><span>${item.label}</span></a>`;
+    };
+    const navListHtml = menuStructure.map(group => group.type === 'single' ? renderLink(group) : `
+      <section class="sidebar-nav-section" aria-labelledby="sidebar-heading-${group.groupKey}">
+        <h2 class="sidebar-nav-heading" id="sidebar-heading-${group.groupKey}">${group.label}</h2>
+        <div class="sidebar-nav-links">${group.items.map(renderLink).join('')}</div>
+      </section>`).join('');
 
     // Fetch dynamic logo and app title from AuthHelper.systemSettings
     const settings = (typeof AuthHelper !== 'undefined' && AuthHelper.systemSettings) ? AuthHelper.systemSettings : {};
@@ -391,6 +363,17 @@ const SidebarComponent = {
     ` : `<div class="brand-mark sidebar-logo-mark" style="width:48px; height:48px; font-size:1.4rem; border-radius:14px; flex-shrink:0;">P</div>`;
 
     el.innerHTML = `
+      <style>
+        .portal-sidebar .sidebar-nav-section{margin:0 0 18px}
+        .portal-sidebar .sidebar-nav-heading{margin:0 10px 6px;font-family:inherit;font-size:.65rem;font-weight:800;line-height:1.5;letter-spacing:.09em;text-transform:uppercase;color:#64756d}
+        .portal-sidebar .sidebar-nav-links{display:flex;flex-direction:column;gap:3px}
+        .portal-sidebar .sidebar-nav-link{display:flex;align-items:center;gap:11px;min-height:42px;padding:9px 12px;box-sizing:border-box;border:1px solid transparent;border-radius:10px;color:var(--ink);font-size:.82rem;font-weight:650;text-decoration:none;line-height:1.35}
+        .portal-sidebar .sidebar-nav-link i{font-size:1rem;flex:0 0 20px;text-align:center;color:var(--green)}
+        .portal-sidebar .sidebar-nav-link:hover{background:#eaf1e9}
+        .portal-sidebar .sidebar-nav-link:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+        .portal-sidebar .sidebar-nav-link.is-active{background:var(--green);color:#fff;border-color:var(--green)}
+        .portal-sidebar .sidebar-nav-link.is-active i{color:var(--lime)}
+      </style>
       <div style="display:flex; flex-direction:column; justify-content:space-between; height:100%;">
         <div>
           <!-- Brand Header -->
@@ -402,10 +385,8 @@ const SidebarComponent = {
             <button onclick="if(typeof closeSidebar === 'function') closeSidebar(); else document.querySelector('#sidebar-container')?.classList.remove('is-open');" class="button dark" style="padding:2px 8px; font-size:0.75rem; display:none;" id="sidebar-close-btn">&times;</button>
           </div>
 
-          <div class="mono" style="margin-bottom:12px; color:var(--green); font-size:0.68rem; font-weight:700;">NAVIGATION &amp; PORTAL MENU</div>
-          <div style="display:flex; flex-direction:column; gap:2px;">
-            ${navListHtml}
-          </div>
+
+          <nav aria-label="Portal navigation">${navListHtml}</nav>
         </div>
 
         <div style="border-top:2px solid var(--ink); padding-top:14px; margin-top:auto;">

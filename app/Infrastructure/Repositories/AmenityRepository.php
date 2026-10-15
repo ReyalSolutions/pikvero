@@ -12,8 +12,9 @@ class AmenityRepository {
     }
 
     public function getAllWithCounts(): array {
+        $scope = \App\Core\Auth\TenantScope::facilitySql('fa.facility_id');
         $sql = "SELECT a.*, 
-                       (SELECT COUNT(DISTINCT fa.facility_id) FROM facility_amenities fa WHERE fa.amenity_id = a.id) AS assigned_facilities_count
+                       (SELECT COUNT(DISTINCT fa.facility_id) FROM facility_amenities fa WHERE fa.amenity_id = a.id AND {$scope}) AS assigned_facilities_count
                 FROM amenities a
                 ORDER BY a.id ASC";
         return $this->db->select($sql);
@@ -58,8 +59,9 @@ class AmenityRepository {
         $start = max(0, $start);
         $length = max(1, min(100, $length));
 
+        $scope = \App\Core\Auth\TenantScope::facilitySql('fa.facility_id');
         $sql = "SELECT a.*, 
-                       (SELECT COUNT(DISTINCT fa.facility_id) FROM facility_amenities fa WHERE fa.amenity_id = a.id) AS assigned_facilities_count
+                       (SELECT COUNT(DISTINCT fa.facility_id) FROM facility_amenities fa WHERE fa.amenity_id = a.id AND {$scope}) AS assigned_facilities_count
                 FROM amenities a
                 WHERE {$whereSql}
                 ORDER BY {$colName} {$dir}

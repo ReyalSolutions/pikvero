@@ -116,6 +116,7 @@ require_once __DIR__ . '/../../includes/head.php';
 
           <!-- TAB 1: IDENTITY & BRANDING -->
           <div id="tab-panel-branding" class="settings-panel active">
+            <?php require __DIR__ . '/../../includes/portal-theme-picker.php'; ?>
             <h3 style="font-size:1.1rem; font-weight:800; text-transform:uppercase; margin-bottom:18px; border-bottom:1px solid var(--line); padding-bottom:8px;">
               ORGANIZATION &amp; BRANDING IDENTITY
             </h3>
@@ -610,6 +611,7 @@ require_once __DIR__ . '/../../includes/head.php';
     }
 
     function populateSettingsForm(data) {
+      window.PortalTheme?.apply(data.admin_theme_mode || 'light');
       for (const [key, val] of Object.entries(data)) {
         const el = document.getElementById(`set-${key}`);
         if (!el) continue;
@@ -627,6 +629,7 @@ require_once __DIR__ . '/../../includes/head.php';
 
     async function submitSaveSettings() {
       const payload = {
+        admin_theme_mode: document.querySelector('[name="theme_mode"]:checked')?.value || 'light',
         org_logo_url: document.getElementById('set-org_logo_url').value.trim(),
         org_name: document.getElementById('set-org_name').value.trim(),
         app_name: document.getElementById('set-app_name').value.trim(),

@@ -34,7 +34,7 @@ if (!$booking) {
 
 // Tenant Scoping for Court Owners
 if (!in_array($role, ['super_admin', 'platform_admin'])) {
-    $tenantOrgId = (int)($user['organization_id'] ?? 0);
+    $tenantOrgId = \App\Core\Auth\TenantScope::requireOrganization();
     if ((int)$booking['organization_id'] !== $tenantOrgId) {
         header('Location: /pikvero/public/403.php');
         exit;

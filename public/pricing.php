@@ -364,7 +364,12 @@ $user = $isLoggedIn ? Auth::user() : [];
       gap: 6px;
       margin-bottom: 8px;
       font-family: 'Outfit', sans-serif;
+      flex-wrap: wrap;
     }
+    .plan-trial-regular{display:block;margin:12px 0 8px;color:#52605b;font-size:1.05rem;font-weight:700}
+    .plan-trial-regular s{text-decoration-thickness:2px}
+    .plan-trial-note{font-size:.85rem;line-height:1.5;color:#394c43;margin:8px 0 14px}
+    .plan-trial-price .price-val{font-size:2.35rem;color:#08783e!important}
 
     .price-currency {
       font-size: 1.3rem;
@@ -870,7 +875,7 @@ $user = $isLoggedIn ? Auth::user() : [];
       const base = window.APP_BASE_PATH || '';
 
       grid.innerHTML = plansToRender.map((plan, i) => {
-        const isFree = Boolean(plan.is_free_trial);
+        const isFree = Number(plan.is_free_trial) === 1;
         const isPro = plan.slug === 'pro' || plan.name.toLowerCase().includes('pro');
         const isEnterprise = plan.slug === 'enterprise' || plan.name.toLowerCase().includes('enterprise');
 
@@ -878,37 +883,35 @@ $user = $isLoggedIn ? Auth::user() : [];
         let priceHtml = '';
         let yearlySubtext = '';
 
+        const trialMonths = Math.max(1, Number(plan.trial_duration_months) || 1);
+        const monthlyPrice = Number(plan.monthly_price) || 0;
+        const yearlyPrice = Number(plan.yearly_price) || monthlyPrice * 12;
+        const regularPrice = isYearly ? yearlyPrice : monthlyPrice;
+        const cycle = isYearly ? 'year' : 'month';
+        const money = value => value.toLocaleString('en-PH', {maximumFractionDigits:2});
         if (isFree) {
           priceHtml = `
-            <div class="plan-price-wrap">
-              <span class="price-currency">₱0</span>
-              <strong class="price-val">FREE</strong>
-              <span class="price-cycle">/mo</span>
+            ${regularPrice > 0 ? `<div class="plan-trial-regular"><s>₱${money(regularPrice)} / ${cycle}</s></div>` : ''}
+            <div class="plan-price-wrap plan-trial-price">
+              <strong class="price-val">FREE TRIAL</strong>
             </div>
+            <p class="plan-trial-note"><strong>${trialMonths} month${trialMonths === 1 ? '' : 's'} free</strong> · ₱0 during your trial.${regularPrice > 0 ? `<br>Then ₱${money(regularPrice)} / ${cycle}.` : ''}<br>For eligible owners who haven’t used a free trial.</p>
           `;
         } else {
-          let calculatedPrice = plan.monthly_price;
-          if (isYearly) {
-            // Apply 20% discount
-            calculatedPrice = Math.round(plan.monthly_price * 0.8);
-            const totalYearly = calculatedPrice * 12;
-            yearlySubtext = `<div class="plan-yearly-subtext">Billed ₱${totalYearly.toLocaleString('en-PH')}/yr (Save 20%)</div>`;
-          }
           priceHtml = `
             <div class="plan-price-wrap">
-              <strong class="price-val">₱${calculatedPrice.toLocaleString('en-PH')}</strong>
-              <span class="price-cycle">/mo</span>
+              <strong class="price-val">₱${money(regularPrice)}</strong>
+              <span class="price-cycle">/${isYearly ? 'yr' : 'mo'}</span>
             </div>
-            ${yearlySubtext}
+            ${isYearly ? `<div class="plan-yearly-subtext">Billed yearly</div>` : ''}
           `;
         }
-
         // Top Badges
         let topBadgeHtml = '';
         if (isFree) {
           topBadgeHtml = `
             <div class="plan-top-row">
-              <span class="plan-pill-tag sky">STARTER PLAN</span>
+              <span class="plan-pill-tag sky">${escapeHtml(plan.name)}</span>
               <span class="plan-pill-tag coral"><i class="bi bi-gift-fill"></i> FREE TRIAL</span>
             </div>
           `;

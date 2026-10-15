@@ -134,25 +134,28 @@ class SubscriptionPlanRepository {
     }
 
     public function getActiveSubscriptions(): array {
+        $scope = \App\Core\Auth\TenantScope::organizationSql('s.organization_id');
         $sql = "SELECT s.*, o.name AS organization_name, sp.name AS plan_name, sp.monthly_price
                 FROM subscriptions s
                 JOIN organizations o ON s.organization_id = o.id
                 JOIN subscription_plans sp ON s.plan_id = sp.id
+                WHERE {$scope}
                 ORDER BY s.id DESC";
         return $this->db->select($sql);
     }
 
     public function getActiveSubscriptionsPaginated(array $params): array {
+        $scope = \App\Core\Auth\TenantScope::organizationSql('s.organization_id');
         $draw   = (int)($params['draw'] ?? 1);
         $start  = (int)($params['start'] ?? 0);
         $length = (int)($params['length'] ?? 10);
         $search = trim($params['search']['value'] ?? '');
 
         // Base total count
-        $totalRow = $this->db->selectOne("SELECT COUNT(*) AS total FROM subscriptions");
+        $totalRow = $this->db->selectOne("SELECT COUNT(*) AS total FROM subscriptions s WHERE {$scope}");
         $recordsTotal = (int)($totalRow['total'] ?? 0);
 
-        $whereClause = " WHERE 1=1";
+        $whereClause = " WHERE {$scope}";
         $queryParams = [];
         $types = "";
 
@@ -298,34 +301,9 @@ class SubscriptionPlanRepository {
                 ORDER BY s.id DESC LIMIT 1
             ", [$orgId], 'i');
 
-            if (!$sub && $allowFallback) {
-                $starter = $this->db->selectOne("SELECT id FROM subscription_plans ORDER BY id ASC LIMIT 1");
-                if ($starter) {
-                    $this->subscribeTenantToPlan($orgId, (int)$starter['id'], 'monthly');
-                    $sub = $this->db->selectOne("
-                        SELECT s.*, sp.name AS plan_name, sp.slug AS plan_slug, sp.monthly_price, sp.yearly_price,
-                               sp.max_facilities, sp.max_courts, sp.max_staff, sp.description AS plan_description,
-                               sp.is_free_trial, sp.trial_duration_months, sp.trial_start_date, sp.trial_end_date
-                        FROM subscriptions s
-                        JOIN subscription_plans sp ON s.plan_id = sp.id
-                        WHERE s.organization_id = ?
-                        ORDER BY s.id DESC LIMIT 1
-                    ", [$orgId], 'i');
-                }
-            }
         }
 
-        if (!$sub && $allowFallback) {
-            $sub = $this->db->selectOne("
-                SELECT s.*, sp.name AS plan_name, sp.slug AS plan_slug, sp.monthly_price, sp.yearly_price,
-                       sp.max_facilities, sp.max_courts, sp.max_staff, sp.description AS plan_description,
-                       sp.is_free_trial, sp.trial_duration_months, sp.trial_start_date, sp.trial_end_date
-                FROM subscriptions s
-                JOIN subscription_plans sp ON s.plan_id = sp.id
-                ORDER BY s.id DESC LIMIT 1
-            ");
-        }
-
+        // A missing tenant subscription stays empty; never borrow another organization's plan.
         if ($sub) {
             $sub['features'] = $this->getPlanFeatures((int)$sub['plan_id']);
             $targetOrgId = (int)($sub['organization_id'] ?? $orgId);
@@ -335,7 +313,7 @@ class SubscriptionPlanRepository {
 
         $facCount = (int)($this->db->selectOne("SELECT COUNT(*) AS cnt FROM facilities WHERE organization_id = ?", [$targetOrgId], 'i')['cnt'] ?? 0);
         $courtCount = (int)($this->db->selectOne("SELECT COUNT(*) AS cnt FROM courts c JOIN facilities f ON c.facility_id = f.id WHERE f.organization_id = ?", [$targetOrgId], 'i')['cnt'] ?? 0);
-        $staffCount = (int)($this->db->selectOne("SELECT COUNT(*) AS cnt FROM users u JOIN roles r ON u.role_id = r.id WHERE r.name IN ('facility_manager', 'receptionist', 'court_staff')")['cnt'] ?? 0);
+        $staffCount = (int)($this->db->selectOne("SELECT COUNT(DISTINCT u.id) AS cnt FROM users u JOIN roles r ON u.role_id = r.id JOIN organization_users ou ON ou.user_id = u.id WHERE ou.organization_id = ? AND r.name IN ('facility_manager', 'receptionist', 'court_staff')", [$targetOrgId], 'i')['cnt'] ?? 0);
 
         $payments = [];
         if ($sub) {
@@ -348,6 +326,7 @@ class SubscriptionPlanRepository {
         }
 
         return [
+            'organization_id' => $orgId,
             'subscription' => $sub,
             'has_used_free_trial' => $this->hasUsedFreeTrial($orgId),
             'usage' => [
@@ -359,7 +338,9 @@ class SubscriptionPlanRepository {
         ];
     }
 
-    public function subscribeTenantToPlan(int $orgId, int $planId, string $billingCycle = 'monthly', string $customPaymentNote = ''): array {
+    public function subscribeTenantToPlan(int $orgId, int $planId, string $billingCycle = 'monthly', string $customPaymentNote = '', ?float $verifiedAmount = null): array {
+        if ($orgId <= 0 || !$this->db->selectOne('SELECT id FROM organizations WHERE id = ? FOR UPDATE', [$orgId], 'i')) return ['success' => false, 'message' => 'Organization profile not found.'];
+        if (!in_array($billingCycle, ['monthly', 'yearly'], true)) return ['success' => false, 'message' => 'Invalid billing cycle.'];
         $plan = $this->findById($planId);
         if (!$plan) {
             return ['success' => false, 'message' => 'Subscription plan tier not found.'];
@@ -372,15 +353,11 @@ class SubscriptionPlanRepository {
             $lastPm = $this->db->selectOne("SELECT payment_method FROM subscription_payments WHERE subscription_id = ? ORDER BY id DESC LIMIT 1", [(int)$existing['id']], 'i');
             $pmStr = strtolower($lastPm['payment_method'] ?? '');
             $prevCycle = !empty($existing['billing_cycle']) ? $existing['billing_cycle'] : ((str_contains($pmStr, 'annual') || str_contains($pmStr, 'yearly')) ? 'yearly' : 'monthly');
+            $existing['billing_cycle'] = $prevCycle === 'annual' ? 'yearly' : $prevCycle;
         }
 
-        // Rule 1: Cannot downgrade from an active Yearly subscription to Monthly billing
-        if ($prevCycle === 'yearly' && $billingCycle === 'monthly' && $existing && $existing['status'] === 'active') {
-            return [
-                'success' => false,
-                'message' => 'Downgrading from an active Annual Plan to Monthly billing is not available until your current term ends.'
-            ];
-        }
+        try { \App\Application\Services\SubscriptionBilling::validateCycle($existing, $billingCycle); }
+        catch (\InvalidArgumentException $e) { return ['success' => false, 'message' => $e->getMessage()]; }
 
         $isYearly = ($billingCycle === 'yearly');
         $isFree   = ((int)($plan['is_free_trial'] ?? 0) === 1) && !$this->hasUsedFreeTrial($orgId);
@@ -390,15 +367,11 @@ class SubscriptionPlanRepository {
 
         $monthsToAdd = $isFree ? max(1, (int)($plan['trial_duration_months'] ?? 1)) : ($isYearly ? 12 : 1);
         
-        // Extend period from existing future current_period_end if active
-        $baseTimestamp = time();
-        if ($existing && !empty($existing['current_period_end'])) {
-            $existingEndTs = strtotime($existing['current_period_end']);
-            if ($existingEndTs && $existingEndTs > time()) {
-                $baseTimestamp = $existingEndTs;
-            }
+        $periodEnd = \App\Application\Services\SubscriptionBilling::renewalEnd($existing, $monthsToAdd);
+        $quote = \App\Application\Services\SubscriptionBilling::quote($plan, $billingCycle, $this->hasUsedFreeTrial($orgId));
+        if ($verifiedAmount !== null && (int)round($verifiedAmount * 100) !== $quote['amount_centavos']) {
+            return ['success' => false, 'message' => 'Checkout amount does not match this plan. Start checkout again.'];
         }
-        $periodEnd = date('Y-m-d', strtotime("+{$monthsToAdd} months", $baseTimestamp));
 
         if ($existing) {
             $this->db->execute("
@@ -412,29 +385,9 @@ class SubscriptionPlanRepository {
             $subId = $this->db->getLastInsertId();
         }
 
-        $fullAmount = $isFree ? 0.00 : ($isYearly ? (float)($plan['yearly_price'] ?? round($plan['monthly_price'] * 12 * 0.70, 2)) : (float)$plan['monthly_price']);
-
-        // Rule 2: If upgrading from Monthly to Yearly, deduct the monthly payment already paid
-        $creditDeduction = 0.00;
-        $paymentNote = $isFree ? 'Free Trial Promo' : ($isYearly ? 'Annual PayMongo/Card' : 'Monthly Card');
-
-        if (!empty($customPaymentNote)) {
-            $paymentNote = $customPaymentNote;
-        }
-        if ($isFree && stripos($paymentNote, 'free trial') === false) {
-            $paymentNote = 'Free Trial Promo | ' . $paymentNote;
-        }
-
-        if ($prevCycle === 'monthly' && $isYearly && $existing) {
-            $lastPayment = $this->db->selectOne("SELECT amount FROM subscription_payments WHERE subscription_id = ? AND payment_status = 'paid' ORDER BY id DESC LIMIT 1", [$subId], 'i');
-            $paidAmount = (float)($lastPayment['amount'] ?? 0);
-            if ($paidAmount > 0) {
-                $creditDeduction = $paidAmount;
-                $paymentNote = "Annual Upgrade (₱" . number_format($creditDeduction, 2) . " Credit Applied)";
-            }
-        }
-
-        $finalAmount = max(0.00, round($fullAmount - $creditDeduction, 2));
+        $paymentNote = $customPaymentNote ?: ($isFree ? 'Free Trial Promo' : ($isYearly ? 'Annual PayMongo/Card' : 'Monthly PayMongo/Card'));
+        if ($isFree && stripos($paymentNote, 'free trial') === false) $paymentNote = 'Free Trial Promo | ' . $paymentNote;
+        $finalAmount = $verifiedAmount ?? $quote['total'];
 
         $this->db->execute("
             INSERT INTO subscription_payments (subscription_id, amount, payment_method, payment_status)

@@ -49,6 +49,7 @@ class AmenityController {
             Response::error('Facility ID is required.');
         }
 
+        \App\Core\Auth\TenantScope::requireFacility($facilityId);
         $assignedIds = $this->amenityRepo->getFacilityAssignments($facilityId);
         $allAmenities = $this->amenityRepo->getAllWithCounts();
 
@@ -81,6 +82,7 @@ class AmenityController {
     }
 
     public function update(Request $request): void {
+        if (!Auth::hasRole('super_admin', 'platform_admin')) Response::forbidden('Shared amenity definitions are managed by platform administrators.');
         Auth::requirePermission('amenities.manage');
 
         $id = (int)$request->get('id');
@@ -103,6 +105,7 @@ class AmenityController {
     }
 
     public function delete(Request $request): void {
+        if (!Auth::hasRole('super_admin', 'platform_admin')) Response::forbidden('Shared amenity definitions are managed by platform administrators.');
         Auth::requirePermission('amenities.manage');
 
         $id = (int)$request->get('id');
@@ -132,6 +135,7 @@ class AmenityController {
         }
 
         try {
+            \App\Core\Auth\TenantScope::requireFacility($facilityId);
             $this->amenityRepo->saveFacilityAssignments($facilityId, $amenityIds);
             Response::success('Facility amenities assigned successfully.');
         } catch (Exception $e) {

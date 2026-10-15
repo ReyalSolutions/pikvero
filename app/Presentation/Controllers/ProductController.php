@@ -11,7 +11,7 @@ class ProductController {
     private ProductRepository $repo;
 
     public function __construct() {
-        $this->repo = new ProductRepository();
+        $this->repo = new ProductRepository(true);
     }
 
     public function getPaginatedDataTables(Request $request): void {
@@ -134,6 +134,21 @@ class ProductController {
         $facilityId = $request->get('facility_id') ? (int)$request->get('facility_id') : null;
         $metrics = $this->repo->getMetrics($facilityId);
         Response::success('Product sales metrics loaded', $metrics);
+    }
+
+    public function returnRental(Request $request): void {
+        Auth::requirePermission('products.inventory');
+        if (!Auth::hasRole('court_owner', 'owner', 'super_admin', 'platform_admin')) Response::forbidden('Only the facility owner may mark rentals as returned.');
+        $id = (int)$request->get('sale_id');
+        if ($id <= 0) Response::error('A valid rental transaction ID is required.');
+        try {
+            $result = $this->repo->returnRental($id);
+            $message = $result['already_returned'] ? 'This rental was already returned. Stock was not changed.'
+                : ($result['quantity_restored'] > 0 ? 'Rental marked returned. Available stock has been restored.' : 'Rental marked returned. Stock for this older rental was already available.');
+            Response::success($message, $result);
+        } catch (Exception $e) {
+            Response::error($e->getMessage());
+        }
     }
 
     public function getPaginatedSalesDataTables(Request $request): void {

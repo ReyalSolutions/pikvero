@@ -11,7 +11,7 @@ class PaymentRepository {
     }
 
     private function getBaseUnionSql(?int $organizationId = null): string {
-        $orgWhereBooking = ($organizationId !== null && $organizationId > 0) ? " WHERE (b.organization_id = {$organizationId} OR f.organization_id = {$organizationId})" : "";
+        $orgWhereBooking = ($organizationId !== null && $organizationId > 0) ? " WHERE f.organization_id = {$organizationId}" : "";
         $orgWhereOpenPlay = ($organizationId !== null && $organizationId > 0) ? " WHERE f.organization_id = {$organizationId}" : "";
 
         return "

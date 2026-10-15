@@ -178,7 +178,7 @@ class PayoutRepository {
     }
 
     private function getGcashRevenueUnionSql(?int $organizationId = null): string {
-        $orgWhereBooking = ($organizationId !== null && $organizationId > 0) ? " AND (b.organization_id = {$organizationId} OR f.organization_id = {$organizationId})" : "";
+        $orgWhereBooking = ($organizationId !== null && $organizationId > 0) ? " AND f.organization_id = {$organizationId}" : "";
         $orgWhereOpenPlay = ($organizationId !== null && $organizationId > 0) ? " AND f.organization_id = {$organizationId}" : "";
 
         return "

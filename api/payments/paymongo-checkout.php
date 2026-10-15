@@ -27,6 +27,10 @@ $planSlug     = strtolower(Sanitizer::cleanString($input['plan_slug'] ?? ''));
 $billingCycle = strtolower(Sanitizer::cleanString($input['billing_cycle'] ?? 'monthly'));
 $payMethod    = strtolower(Sanitizer::cleanString($input['payment_method'] ?? 'gcash'));
 $redirectUrl  = trim($input['redirect_url'] ?? '');
+$ownerOrgId = null;
+if (Auth::check() && Auth::hasRole('court_owner', 'owner')) {
+    $ownerOrgId = \App\Core\Auth\TenantScope::requireOrganization();
+}
 
 // Fallback: build the absolute redirect URL from the request headers if not supplied
 if (empty($redirectUrl)) {
@@ -67,21 +71,20 @@ if (!$plan) {
     Response::error('Selected subscription plan not found.');
 }
 
-// Calculate base price according to billing cycle
-$monthlyPrice = (float)($plan['monthly_price'] ?? 0);
-$yearlyPrice  = ((float)($plan['yearly_price'] ?? 0) > 0) ? (float)$plan['yearly_price'] : round($monthlyPrice * 12 * 0.70, 2);
-
-$basePrice = ($billingCycle === 'yearly') ? $yearlyPrice : $monthlyPrice;
-// Trial eligibility comes from the selected database plan, never the client.
+// Use the same pricing rules for checkout, activation and renewal.
 $hasUsedFreeTrial = (new SubscriptionPlanRepository())->hasUsedFreeTrial(0, (int)(Auth::id() ?? 0));
-$isFreeTrial = (int)($plan['is_free_trial'] ?? 0) === 1 && !$hasUsedFreeTrial;
-if ($isFreeTrial) {
-    $basePrice = 0;
-}
-$platformFee = round($basePrice * 0.02, 2);
-$gatewayFee = round($basePrice * 0.025, 2);
-$totalAmount = $basePrice + $platformFee + $gatewayFee;
-$amountInCentavos = (int)round($totalAmount * 100);
+try {
+    if ($ownerOrgId) {
+        $current = (new SubscriptionPlanRepository())->getTenantSubscriptionSummary($ownerOrgId, false)['subscription'];
+        \App\Application\Services\SubscriptionBilling::validateCycle($current, $billingCycle);
+    }
+    $quote = \App\Application\Services\SubscriptionBilling::quote($plan, $billingCycle, $hasUsedFreeTrial);
+} catch (\InvalidArgumentException $e) { Response::error($e->getMessage()); }
+$basePrice = $quote['base'];
+$platformFee = $quote['platform_fee'];
+$gatewayFee = $quote['gateway_fee'];
+$totalAmount = $quote['total'];
+$amountInCentavos = $quote['amount_centavos'];
 
 // Map frontend payment method selection to PayMongo Checkout Sessions API types
 $paymongoTypeMap = [
@@ -205,7 +208,7 @@ if (empty($checkoutUrl)) {
 
 Response::success('PayMongo Checkout Session created successfully.', [
     'checkout_url' => $checkoutUrl,
-    'reference'    => $referenceId,
+    'reference'    => $clientReference,
     'plan_name'    => $plan['name'],
     'total_amount' => $totalAmount,
     'mode'         => $mode

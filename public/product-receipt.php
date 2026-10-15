@@ -14,7 +14,7 @@ if (!$saleId) {
 }
 
 $db = Connection::getInstance();
-$sql = "SELECT s.*, p.name AS product_name, p.category, p.type, f.name AS facility_name, f.address AS facility_address, f.city AS facility_city, f.phone AS facility_phone
+$sql = "SELECT s.*, p.name AS product_name, p.category, s.transaction_type AS type, f.name AS facility_name, f.address AS facility_address, f.city AS facility_city, f.phone AS facility_phone
         FROM product_sales s
         JOIN products p ON s.product_id = p.id
         LEFT JOIN facilities f ON s.facility_id = f.id
@@ -24,9 +24,13 @@ $d = $db->selectOne($sql, [$saleId], 'i');
 if (!$d) {
     die("Product sales receipt transaction not found.");
 }
+if (!Auth::hasRole('super_admin', 'platform_admin') && (int)($d['user_id'] ?? 0) !== (int)Auth::id()) {
+    \App\Core\Auth\TenantScope::requireFacility((int)$d['facility_id']);
+}
+$embedded = ($_GET['embedded'] ?? '') === '1';
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" <?= $embedded ? \App\Core\View\PortalTheme::attributes(true) : '' ?>>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -223,12 +227,18 @@ if (!$d) {
         word-break: break-word;
       }
     }
+    @media screen {
+      body.receipt-embedded { padding:12px;background:#f4f6f3;min-height:100dvh; }
+      .receipt-embedded .no-print-bar { justify-content:flex-end; }
+      .receipt-embedded .receipt-card { box-shadow:3px 3px 0 var(--ink); }
+    }
   </style>
+  <?php if ($embedded) require_once __DIR__ . '/../includes/portal-theme-assets.php'; ?>
 </head>
-<body>
+<body<?= $embedded ? ' class="receipt-embedded"' : '' ?>>
 
   <div class="no-print-bar">
-    <button onclick="handleBack()" class="btn-action sand"><i class="bi bi-arrow-left"></i> Back</button>
+    <?php if (!$embedded): ?><button onclick="handleBack()" class="btn-action sand"><i class="bi bi-arrow-left"></i> Back</button><?php endif; ?>
     <div class="btn-group-actions" style="display:flex; gap:8px;">
       <button id="btn-download-img" onclick="downloadImage()" class="btn-action sky" style="background:#e0f2fe; color:#0369a1; border-color:#0284c7;"><i class="bi bi-file-image-fill"></i> PNG</button>
       <button id="btn-download-pdf" onclick="downloadPDF()" class="btn-action coral" style="background:var(--coral); color:#fff;"><i class="bi bi-download"></i> PDF</button>
@@ -246,7 +256,7 @@ if (!$d) {
         <?= htmlspecialchars($d['facility_name'] ?: 'Official Pickleball Facility') ?><br>
         <?= htmlspecialchars($d['facility_address'] ?: 'Bohol, Philippines') ?>
       </div>
-      <div class="receipt-badge">SALES RECEIPT</div>
+      <div class="receipt-badge"><?= $d['type'] === 'rental' ? 'RENTAL RECEIPT' : 'SALES RECEIPT' ?></div>
     </div>
 
     <div class="info-row">
@@ -261,10 +271,18 @@ if (!$d) {
       <span>CUSTOMER:</span>
       <strong><?= htmlspecialchars($d['customer_name']) ?></strong>
     </div>
+    <?php if ($d['type'] === 'rental'): ?>
+    <div class="info-row">
+      <span>RENTAL STATUS:</span>
+      <strong><?= $d['rental_status'] === 'returned' ? 'RETURNED' : 'RENTED OUT' ?></strong>
+    </div>
+    <?php if ($d['returned_at']): ?>
+    <div class="info-row"><span>RETURNED:</span><span><?= htmlspecialchars($d['returned_at']) ?></span></div>
+    <?php endif; endif; ?>
 
     <div class="divider-line"></div>
 
-    <div style="font-size:0.72rem; font-weight:700; color:#4a5c56; margin-bottom:8px; text-transform:uppercase;">PURCHASED ITEMS</div>
+    <div style="font-size:0.72rem; font-weight:700; color:#4a5c56; margin-bottom:8px; text-transform:uppercase;"><?= $d['type'] === 'rental' ? 'RENTED ITEMS' : 'PURCHASED ITEMS' ?></div>
 
     <div class="item-row">
       <div>

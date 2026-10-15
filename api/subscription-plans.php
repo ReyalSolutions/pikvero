@@ -5,7 +5,7 @@ use App\Core\Http\Response;
 
 try {
     $db = Connection::getInstance();
-    $plans = $db->select("SELECT id, name, slug, monthly_price, yearly_price, is_free_trial, max_facilities, max_courts, max_staff, description FROM subscription_plans ORDER BY monthly_price ASC, id ASC");
+    $plans = $db->select("SELECT id, name, slug, monthly_price, yearly_price, is_free_trial, trial_duration_months, max_facilities, max_courts, max_staff, description FROM subscription_plans ORDER BY monthly_price ASC, id ASC");
 
     foreach ($plans as &$plan) {
         $features = $db->select("SELECT feature FROM subscription_plan_features WHERE plan_id = ? ORDER BY id ASC", [(int)$plan['id']], 'i');
@@ -13,6 +13,7 @@ try {
         $plan['monthly_price']  = (float)$plan['monthly_price'];
         $plan['yearly_price']   = (float)$plan['yearly_price'];
         $plan['is_free_trial']  = (int)$plan['is_free_trial'];
+        $plan['trial_duration_months'] = max(1, (int)$plan['trial_duration_months']);
         $plan['max_facilities'] = (int)$plan['max_facilities'];
         $plan['max_courts']     = (int)$plan['max_courts'];
         $plan['max_staff']      = (int)$plan['max_staff'];

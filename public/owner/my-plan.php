@@ -383,15 +383,21 @@ if (empty($enabledPaymentMethods)) {
     let allPlansList = [];
     let currentBillingCycle = 'monthly';
     let canManageSubscription = false;
+    function isSubscriptionActive(sub) {
+      if (!sub || !['active', 'trial', 'trialing'].includes(sub.status)) return false;
+      const end = sub.current_period_end ? new Date(sub.current_period_end.slice(0, 10) + 'T23:59:59') : null;
+      return end && end >= new Date();
+    }
 
     function triggerPayNowModal() {
       const sub = currentSubscriptionData ? currentSubscriptionData.subscription : null;
       if (!sub) return;
 
-      const isYearly = (sub.current_billing_cycle === 'yearly');
+      const isYearly = ['yearly', 'annual'].includes(sub.current_billing_cycle);
       const mPrice = parseFloat(sub.monthly_price) || 0;
       const yPrice = (parseFloat(sub.yearly_price) > 0) ? parseFloat(sub.yearly_price) : Math.round(mPrice * 12 * 0.70 * 100) / 100;
-      const amount = isYearly ? yPrice : mPrice;
+      const baseAmount = isYearly ? yPrice : mPrice;
+      const amount = Math.round((baseAmount + Math.round(baseAmount * .02 * 100) / 100 + Math.round(baseAmount * .025 * 100) / 100) * 100) / 100;
 
       const planNameEl = document.getElementById('pay-modal-plan-name');
       if (planNameEl) planNameEl.textContent = sub.plan_name || 'Starter Plan';
@@ -403,17 +409,15 @@ if (empty($enabledPaymentMethods)) {
       if (priceEl) priceEl.textContent = `₱${amount.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
 
       // Calculate extended subscription period end date preview
-      let currentEnd = sub.current_period_end ? new Date(sub.current_period_end) : new Date();
+      let currentEnd = sub.current_period_end ? new Date(sub.current_period_end.slice(0, 10) + 'T23:59:59') : new Date();
       let now = new Date();
-      let baseDate = (currentEnd > now) ? currentEnd : now;
+      let baseDate = isSubscriptionActive(sub) && currentEnd > now ? currentEnd : now;
 
-      let newEndDate = new Date(baseDate);
-      if (isYearly) {
-        newEndDate.setFullYear(newEndDate.getFullYear() + 1);
-      } else {
-        newEndDate.setMonth(newEndDate.getMonth() + 1);
-      }
-      const formattedNewEnd = newEndDate.toISOString().split('T')[0];
+      const day = baseDate.getDate();
+      const newEndDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + (isYearly ? 12 : 1), 1);
+      const lastDay = new Date(newEndDate.getFullYear(), newEndDate.getMonth() + 1, 0).getDate();
+      newEndDate.setDate(Math.min(day, lastDay));
+      const formattedNewEnd = newEndDate.getFullYear() + '-' + String(newEndDate.getMonth() + 1).padStart(2, '0') + '-' + String(newEndDate.getDate()).padStart(2, '0');
 
       const noticeEl = document.getElementById('pay-modal-notice');
       if (noticeEl) {
@@ -442,19 +446,14 @@ if (empty($enabledPaymentMethods)) {
       }
 
       try {
-        const res = await Api.post('/pikvero/api/owner/subscription/change.php', {
+        const res = await Api.post('/pikvero/api/payments/paymongo-checkout.php', {
           plan_id: sub.plan_id,
-          billing_cycle: sub.current_billing_cycle || 'monthly'
+          billing_cycle: sub.current_billing_cycle === 'annual' ? 'yearly' : (sub.current_billing_cycle || 'monthly'),
+          redirect_url: window.location.origin + '/pikvero/public/owner/my-plan.php'
         });
+        if (!res?.success || !res.data?.checkout_url) throw new Error(res?.message || 'Could not start renewal checkout.');
+        window.location.assign(res.data.checkout_url);
 
-        if (res && res.success) {
-          Toast.success('Payment Received!', 'Your subscription renewal payment was processed successfully.');
-          closePayNowModal();
-          await loadOwnerSubscription();
-          await loadAvailablePlans();
-        } else {
-          Toast.error('Payment Failed', (res && res.message) ? res.message : 'Could not process renewal.');
-        }
       } catch(err) {
         console.error(err);
         Toast.error('Error', err.message || 'An error occurred while renewing your subscription.');
@@ -513,7 +512,7 @@ if (empty($enabledPaymentMethods)) {
       }
 
       container.innerHTML = allPlansList.map(p => {
-        const isCurrent = (parseInt(p.id) === activePlanId);
+        const isCurrent = (parseInt(p.id) === activePlanId) && isSubscriptionActive(activeSub);
         const isFree = parseInt(p.is_free_trial) === 1 && !currentSubscriptionData?.has_used_free_trial;
         const trialMonths = p.trial_duration_months || 1;
         const features = p.features || [];
@@ -737,6 +736,8 @@ if (empty($enabledPaymentMethods)) {
             payment_method: method
           });
           if (!activation?.success) return;
+          if (typeof SubscriptionChecker !== 'undefined') await SubscriptionChecker.refresh();
+          window.subscriptionActivation = activation.data;
         } catch (e) {
           console.error(e);
           return;
@@ -750,7 +751,7 @@ if (empty($enabledPaymentMethods)) {
           title: 'PAYMENT SUCCESSFUL!',
           message: 'Your SaaS subscription plan payment has been authorized & activated successfully via PayMongo.',
           reference: ref,
-          amount: amount,
+          amount: window.subscriptionActivation?.amount_charged ?? amount,
           channel: method,
           planName: planName + ` (${cycle.toUpperCase()} RECURRING)`
         });
@@ -807,7 +808,7 @@ if (empty($enabledPaymentMethods)) {
             const courtPct = Math.min(100, Math.round((usage.courts / (sub.max_courts || 1)) * 100));
             const staffPct = Math.min(100, Math.round((usage.staff / (sub.max_staff || 1)) * 100));
 
-            const isYearlySub = (sub.current_billing_cycle === 'yearly');
+            const isYearlySub = ['yearly','annual'].includes(sub.current_billing_cycle);
             const mPrice = parseFloat(sub.monthly_price) || 0;
             const yPrice = (parseFloat(sub.yearly_price) > 0) ? parseFloat(sub.yearly_price) : Math.round(mPrice * 12 * 0.70 * 100) / 100;
 
@@ -842,7 +843,7 @@ if (empty($enabledPaymentMethods)) {
               <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
                 <div>
                   <div style="display:flex; gap:8px; align-items:center; margin-bottom:4px; flex-wrap:wrap;">
-                    <span class="badge-streetside ${sub.status === 'active' ? 'green' : 'coral'}">${sub.status.toUpperCase()}</span>
+                    <span class="badge-streetside ${isSubscriptionActive(sub) ? 'green' : 'coral'}">${!isSubscriptionActive(sub) && ['active','trial','trialing'].includes(sub.status) ? 'EXPIRED' : sub.status.toUpperCase()}</span>
                     <span class="badge-streetside ${isYearlySub ? 'coral' : 'sand'}">${isYearlySub ? 'ANNUAL BILLING (SAVE 30%)' : 'MONTHLY BILLING'}</span>
                     ${isFree ? `<span class="badge-streetside lime"><i class="bi bi-gift-fill"></i> FREE TRIAL PROMO</span>` : ''}
                   </div>
@@ -906,10 +907,10 @@ if (empty($enabledPaymentMethods)) {
               <div style="background:#f4f7f5; border:2px solid var(--ink); border-radius:12px; padding:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
                 <div>
                   <div style="font-size:0.75rem; font-family:'DM Mono', monospace; font-weight:900; color:#5a7060; text-transform:uppercase;">
-                    NEXT RENEWAL BILLING CYCLE
+                    RENEWAL BILLING CYCLE
                   </div>
                   <div style="font-size:0.95rem; font-weight:800; color:var(--ink); margin-top:2px;">
-                    ${isYearlySub ? 'Annual Auto-Renewal' : 'Monthly Auto-Renewal'} &bull; Period Ends <strong style="color:var(--green);">${sub.current_period_end || 'N/A'}</strong>
+                    ${isYearlySub ? 'Annual billing' : 'Monthly billing'} &bull; Period Ends <strong style="color:var(--green);">${sub.current_period_end || 'N/A'}</strong>
                   </div>
                   <div style="font-size:0.78rem; color:#5a7060; margin-top:2px;">
                     Upcoming Charge: <strong>₱${(isYearlySub ? yPrice : mPrice).toLocaleString('en-US', {minimumFractionDigits:2})}</strong> on ${sub.current_period_end || 'N/A'}
@@ -1158,7 +1159,7 @@ if (empty($enabledPaymentMethods)) {
       }
 
       container.innerHTML = allPlansList.map(p => {
-        const isCurrent = (parseInt(p.id) === activePlanId);
+        const isCurrent = (parseInt(p.id) === activePlanId) && isSubscriptionActive(activeSub);
         const isFree = parseInt(p.is_free_trial) === 1 && !currentSubscriptionData?.has_used_free_trial;
         const trialMonths = p.trial_duration_months || 1;
         const features = p.features || [];

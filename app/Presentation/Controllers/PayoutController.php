@@ -41,18 +41,7 @@ class PayoutController {
             return null; // Platform wide view
         }
 
-        $userId = Auth::id();
-        if (!$userId) return null;
-
-        $orgId = Auth::organizationId();
-        if (!$orgId || $orgId <= 0) {
-            $db = \App\Core\Database\Connection::getInstance();
-            $org = $db->selectOne("SELECT id FROM organizations WHERE owner_id = ? LIMIT 1", [$userId]);
-            if ($org) {
-                $orgId = (int)$org['id'];
-            }
-        }
-        return $orgId;
+        return \App\Core\Auth\TenantScope::requireOrganization();
     }
 
     /**
@@ -276,7 +265,8 @@ class PayoutController {
             $orgId = $this->resolveOrganizationScope();
 
             // Fetch payout details prior to update for notification dispatch
-            $detail = $this->payoutRepo->getPayoutDetail($payoutId, null);
+            $detail = $this->payoutRepo->getPayoutDetail($payoutId, $orgId);
+            if (!$detail) Response::notFound('Payout record not found or access denied.');
 
             if ($status === 'completed' && empty($receiptImagePath) && empty($detail['receipt_image'])) {
                 Response::error('Please upload a GCash transfer receipt / payment proof when marking a payout as Completed.');

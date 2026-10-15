@@ -422,7 +422,7 @@ class BookingRepository {
         $typesProd = "ss";
 
         if ($orgId !== null) {
-            $whereProd = "(f.organization_id = ? OR s.facility_id IS NULL) AND " . $whereProd;
+            $whereProd = "f.organization_id = ? AND " . $whereProd;
             array_unshift($paramsProd, $orgId);
             $typesProd = "i" . $typesProd;
         }
@@ -577,10 +577,11 @@ class BookingRepository {
     }
 
     public function searchCustomers(string $query, int $limit = 10): array {
+        $scope = \App\Core\Auth\TenantScope::organizationSql('b.organization_id');
         $term = '%' . $query . '%';
         $sql  = "SELECT id, first_name, last_name, email, phone
                  FROM users
-                 WHERE (first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR CONCAT(first_name,' ',last_name) LIKE ?)
+                 WHERE EXISTS (SELECT 1 FROM bookings b WHERE b.customer_id = users.id AND {$scope}) AND (first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR CONCAT(first_name,' ',last_name) LIKE ?)
                  ORDER BY first_name ASC
                  LIMIT ?";
         return $this->db->select($sql, [$term, $term, $term, $term, $limit], 'ssssi');

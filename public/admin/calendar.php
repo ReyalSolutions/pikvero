@@ -20,7 +20,7 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
 }
 ?>
 <!doctype html>
-<html lang="en">
+<html lang="en" <?= \App\Core\View\PortalTheme::attributes() ?>>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -180,6 +180,7 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
     }
   </style>
 <?php require_once __DIR__ . '/../../includes/subscription-gate.php'; ?>
+  <?php require_once __DIR__ . '/../../includes/portal-theme-assets.php'; ?>
 </head>
 <body>
 

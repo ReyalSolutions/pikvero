@@ -39,6 +39,7 @@ class SubscriptionController {
     }
 
     public function createPlan(Request $request): void {
+        if (!Auth::hasRole('super_admin', 'platform_admin')) Response::forbidden('Platform administrator access required.');
         if (!Auth::hasPermission('subscriptions.manage', 'subscription.manage', 'plans.manage', 'system.manage')) {
             Response::forbidden('Permission denied: You do not have permission to create subscription plans.');
         }
@@ -66,6 +67,7 @@ class SubscriptionController {
     }
 
     public function updatePlan(Request $request): void {
+        if (!Auth::hasRole('super_admin', 'platform_admin')) Response::forbidden('Platform administrator access required.');
         if (!Auth::hasPermission('subscriptions.manage', 'subscription.manage', 'plans.manage', 'system.manage')) {
             Response::forbidden('Permission denied: You do not have permission to edit subscription plans.');
         }
@@ -98,6 +100,7 @@ class SubscriptionController {
     }
 
     public function deletePlan(Request $request): void {
+        if (!Auth::hasRole('super_admin', 'platform_admin')) Response::forbidden('Platform administrator access required.');
         if (!Auth::hasPermission('subscriptions.manage', 'subscription.manage', 'plans.manage', 'system.manage')) {
             Response::forbidden('Permission denied: You do not have permission to delete subscription plans.');
         }
@@ -138,7 +141,7 @@ class SubscriptionController {
 
         $user   = Auth::user();
         $userId = is_array($user) ? (int)($user['id'] ?? 0) : 0;
-        $orgId  = is_array($user) ? (int)($user['organization_id'] ?? 0) : 0;
+        $orgId  = Auth::organizationId() ?? 0;
 
         if (!$orgId && $userId > 0) {
             $orgRepo = new \App\Infrastructure\Repositories\OrganizationRepository();
@@ -155,7 +158,7 @@ class SubscriptionController {
 
         $user   = Auth::user();
         $userId = is_array($user) ? (int)($user['id'] ?? 0) : 0;
-        $orgId  = is_array($user) ? (int)($user['organization_id'] ?? 0) : 0;
+        $orgId  = Auth::organizationId() ?? 0;
 
         if (!$orgId && $userId > 0) {
             $orgRepo = new \App\Infrastructure\Repositories\OrganizationRepository();
@@ -177,17 +180,8 @@ class SubscriptionController {
     public function subscribeToPlan(Request $request): void {
         Auth::requireAuth();
 
-        $user = Auth::user();
-        $orgId = (int)($user['organization_id'] ?? 0);
-
-        if (!$orgId) {
-            $orgRepo = new \App\Infrastructure\Repositories\OrganizationRepository();
-            $org = $orgRepo->findByOwnerId((int)$user['id']);
-            if ($org) $orgId = (int)$org['id'];
-        }
-
-        if (!$orgId) Response::error('No organization associated with this account.');
-        $ownedOrg=\App\Core\Database\Connection::getInstance()->selectOne('SELECT id FROM organizations WHERE id=? AND owner_id=?',[$orgId,(int)$user['id']],'ii');
+        $orgId = \App\Core\Auth\TenantScope::requireOrganization();
+        $ownedOrg = \App\Core\Database\Connection::getInstance()->selectOne('SELECT id FROM organizations WHERE id = ? AND owner_id = ?', [$orgId, (int)Auth::id()], 'ii');
         if (!$ownedOrg) Response::forbidden('Only the organization owner may purchase its package.');
 
         $data = $request->all();
@@ -201,14 +195,20 @@ class SubscriptionController {
             $planId = (int)($plan['id'] ?? 0);
         }
         if (!$planId) Response::error('A valid subscription plan is required.');
+        if (!in_array($cycle, ['monthly', 'yearly'], true)) Response::error('Invalid billing cycle.');
+        if ($ref === '') Response::error('Complete checkout before activating or renewing your subscription.');
 
         $paymentNote = !empty($ref) ? "PayMongo ({$method}) Ref #{$ref}" : '';
 
         $db=\App\Core\Database\Connection::getInstance();
         $db->beginTransaction();
         try {
-            \App\Application\Services\PackagePaymentVerifier::verify($ref,$planId,$cycle);
-            $res = $this->repo->subscribeTenantToPlan($orgId, $planId, $cycle, $paymentNote);
+            $verified = \App\Application\Services\PackagePaymentVerifier::verify($ref,$planId,$cycle,true);
+            if (!empty($verified['already_activated'])) {
+                $db->commit();
+                Response::success('This payment has already been applied.', ['already_activated' => true, 'amount_charged' => (int)$verified['amount_centavos'] / 100]);
+            }
+            $res = $this->repo->subscribeTenantToPlan($orgId, $planId, $cycle, $paymentNote, (int)$verified['amount_centavos'] / 100);
             if (empty($res['success'])) throw new \RuntimeException($res['message'] ?? 'Package activation failed.');
             \App\Application\Services\PackagePaymentVerifier::consume($ref);
             $db->commit();
@@ -219,7 +219,7 @@ class SubscriptionController {
             Response::error('Package activation rejected. Complete a valid checkout or contact support.');
         }
         if (!empty($res['success'])) {
-            Response::success($res['message'] ?? 'Successfully subscribed to plan!');
+            Response::success($res['message'] ?? 'Successfully subscribed to plan!', ['subscription_id' => $res['subscription_id'], 'amount_charged' => $res['amount_charged']]);
         } else {
             Response::error($res['message'] ?? 'Failed to change subscription plan.');
         }
@@ -230,7 +230,7 @@ class SubscriptionController {
 
         $user   = Auth::user();
         $userId = is_array($user) ? (int)($user['id'] ?? 0) : 0;
-        $orgId  = is_array($user) ? (int)($user['organization_id'] ?? 0) : 0;
+        $orgId  = Auth::organizationId() ?? 0;
 
         if (!$orgId && $userId > 0) {
             $orgRepo = new \App\Infrastructure\Repositories\OrganizationRepository();

@@ -861,14 +861,14 @@
           +   '<span style="font-size:0.65rem; background:var(--lime); color:var(--ink); padding:2px 6px; border-radius:4px; font-weight:900;">ACTIVE VIEW</span>'
           + '</div>'
           + courtCarouselHtml
-          + '<div style="padding:14px;">'
-          + '<div style="display:flex;justify-content:space-between;align-items:center;">'
+          + '<div class="facility-court-content">'
+          + '<div class="facility-court-heading">'
           +   '<h4 style="font-size:1.05rem;font-weight:800;text-transform:uppercase;margin:0;">' + c.name + '</h4>'
           +   '<span class="badge-streetside ' + badge.cls + '" style="font-size:0.62rem;">' + badge.label + '</span>'
           + '</div>'
-          + '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:0.85rem;">'
-          +   '<span style="color:#4a5c56;">' + courtTypeLabel + ' · ' + surfaceLabel + '</span>'
-          +   '<strong style="color:var(--green);">&#8369;' + price + ' / hour</strong>'
+          + '<div class="facility-court-details">'
+          +   '<span class="facility-court-surface">' + courtTypeLabel + ' · ' + surfaceLabel + '</span>'
+          +   '<strong class="facility-court-price">&#8369;' + price + ' <small>/ hour</small></strong>'
           + '</div>'
           + '</div>'
           + '</div>';
@@ -1133,8 +1133,9 @@
                 + '</button>';
             } else {
               var isOpenPlay = slot.status === 'open_play';
+              var isPast = slot.status === 'past';
               var reason = $('<span>').text(isOpenPlay ? 'Closed · Open Play' : (slot.reason || 'Booked')).html();
-              return '<button disabled data-slot-start="' + displayStart + '" data-slot-key="' + slotKey + '" class="button sand slot-btn booked' + (isOpenPlay ? ' open-play-closed' : '') + '">'
+              return '<button disabled aria-label="' + displayStart + ' - ' + reason + '" data-slot-start="' + displayStart + '" data-slot-key="' + slotKey + '" class="button sand slot-btn booked' + (isOpenPlay ? ' open-play-closed' : '') + (isPast ? ' time-passed' : '') + '">'
                 + '<strong>' + displayStart + '–' + displayEnd + '</strong>'
                 + '<span style="font-size:0.68rem;">' + reason + '</span>'
                 + '</button>';
@@ -1494,12 +1495,21 @@
       FooterComponent.render();
 
       // Set up date picker
-      var today = new Date().toISOString().split('T')[0];
+      var today = new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Manila'});
       $('#booking-date-picker').val(today).attr('min', today);
 
       $('#booking-date-picker').on('change', function() {
         if (selectedCourtId) loadTimeSlots(selectedCourtId, $(this).val());
       });
+      // Refresh expiry while the schedule is open, including after returning to the tab.
+      function refreshCurrentDaySlots() {
+        var date = $('#booking-date-picker').val();
+        if (!document.hidden && selectedCourtId && date === new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Manila'})) {
+          loadTimeSlots(selectedCourtId, date);
+        }
+      }
+      setInterval(refreshCurrentDaySlots, 30000);
+      document.addEventListener('visibilitychange', refreshCurrentDaySlots);
 
       loadFacility();
     });

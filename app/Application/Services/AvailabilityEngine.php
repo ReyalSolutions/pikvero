@@ -29,11 +29,14 @@ class AvailabilityEngine {
         $db = Connection::getInstance();
         $opHours = $db->selectOne("SELECT open_time, close_time FROM court_operating_hours WHERE court_id = ? AND day_of_week = ?", [$courtId, $dayOfWeek], 'ii');
 
-        $openTime  = $opHours ? $opHours['open_time']  : '06:00:00';
-        $closeTime = $opHours ? $opHours['close_time'] : '22:00:00';
-
-        $startHour = (int)date('H', strtotime($openTime));
-        $endHour   = (int)date('H', strtotime($closeTime));
+        // Missing hours mean closed; never invent bookable hours for a closed day.
+        if (!$opHours || $opHours['open_time'] >= $opHours['close_time']) {
+            return [];
+        }
+        $openTime = $opHours['open_time'];
+        $closeTime = $opHours['close_time'];
+        $startHour = (int)substr($openTime, 0, 2) + (substr($openTime, 3) !== '00:00' ? 1 : 0);
+        $endHour = (int)substr($closeTime, 0, 2);
 
         // Load all active pricing rules for this court, ordered by specificity
         $pricingRules = $db->select(
@@ -53,6 +56,7 @@ class AvailabilityEngine {
             [$courtId, $date], 'is'
         );
 
+        $now = new \DateTimeImmutable('now', new \DateTimeZone('Asia/Manila'));
         $slots = [];
         for ($h = $startHour; $h < $endHour; $h++) {
             $slotStart = sprintf('%02d:00:00', $h);
@@ -105,7 +109,8 @@ class AvailabilityEngine {
                     break;
                 }
             }
-            $available = !$isBooked && !$isBlocked && !$isOpenPlay;
+            $isPast = new \DateTimeImmutable($date . ' ' . $slotStart, $now->getTimezone()) <= $now;
+            $available = !$isBooked && !$isBlocked && !$isOpenPlay && !$isPast;
 
             $slots[] = [
                 'start_time'    => sprintf('%02d:00', $h),
@@ -115,8 +120,8 @@ class AvailabilityEngine {
                 'formatted'     => $this->to12h($h) . ' - ' . $this->to12h($h + 1),
                 'price'         => $slotPrice,
                 'available'     => $available,
-                'status'        => $isOpenPlay ? 'open_play' : ($isBooked ? 'booked' : ($isBlocked ? 'blocked' : 'available')),
-                'reason'        => $isOpenPlay ? 'Closed for Open Play' : $blockReason,
+                'status'        => $isPast ? 'past' : ($isOpenPlay ? 'open_play' : ($isBooked ? 'booked' : ($isBlocked ? 'blocked' : 'available'))),
+                'reason'        => $isPast ? 'Time passed' : ($isOpenPlay ? 'Closed for Open Play' : $blockReason),
             ];
         }
 
@@ -130,6 +135,30 @@ class AvailabilityEngine {
         }
         if ($court['status'] !== 'active') {
             throw new Exception("Selected court is currently unavailable or under maintenance.");
+        }
+
+        $start = strtotime($date . ' ' . $startTime);
+        $end = strtotime($date . ' ' . $endTime);
+        if (!$start || !$end || $end <= $start) {
+            throw new Exception('Choose a valid start and end time.');
+        }
+        $now = new \DateTimeImmutable('now', new \DateTimeZone('Asia/Manila'));
+        if (new \DateTimeImmutable($date . ' ' . $startTime, $now->getTimezone()) <= $now) {
+            throw new Exception('This start time has already passed. Please select a future time slot.');
+        }
+        $hours = Connection::getInstance()->selectOne(
+            'SELECT open_time, close_time FROM court_operating_hours WHERE court_id = ? AND day_of_week = ?',
+            [$courtId, (int)date('w', strtotime($date))], 'ii'
+        );
+        if (!$hours || $hours['open_time'] >= $hours['close_time'] ||
+            $start < strtotime($date . ' ' . $hours['open_time']) ||
+            $end > strtotime($date . ' ' . $hours['close_time'])) {
+            throw new Exception('The court is closed during the selected time. Please choose a time within its operating hours.');
+        }
+        foreach ($this->courtRepo->getBlockedSchedules($courtId, $date) as $block) {
+            if ($start < strtotime($date . ' ' . $block['end_time']) && $end > strtotime($date . ' ' . $block['start_time'])) {
+                throw new Exception('The court is closed or reserved during the selected time. Please select another slot.');
+            }
         }
 
         $openPlay = Connection::getInstance()->selectOne(

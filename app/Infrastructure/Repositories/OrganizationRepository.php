@@ -49,7 +49,8 @@ class OrganizationRepository {
                 tax_id = ?, 
                 phone = ?, 
                 email = ?, 
-                description = ? 
+                description = ?,
+                theme_mode = ?
                 WHERE id = ?";
         return $this->db->execute($sql, [
             $data['name'],
@@ -59,7 +60,8 @@ class OrganizationRepository {
             $data['phone'] ?? null,
             $data['email'] ?? null,
             $data['description'] ?? null,
+            $data['theme_mode'] ?? 'light',
             $id
-        ], 'sssssssi');
+        ], 'ssssssssi');
     }
 }

@@ -26,9 +26,7 @@ class SubscriptionPaymentRepository {
         $whereConditions = [];
 
         if ($organizationId !== null && $organizationId > 0) {
-            $whereConditions[] = "(s.organization_id = ? OR o.id = ? OR o.owner_id = ?)";
-            $params[] = $organizationId;
-            $params[] = $organizationId;
+            $whereConditions[] = "s.organization_id = ?";
             $params[] = $organizationId;
         }
 
@@ -67,7 +65,7 @@ class SubscriptionPaymentRepository {
         $whereClause = !empty($whereConditions) ? " WHERE " . implode(" AND ", $whereConditions) : "";
 
         // Total count
-        $orgWhere = ($organizationId && $organizationId > 0) ? " WHERE (s.organization_id = {$organizationId} OR o.owner_id = {$organizationId})" : "";
+        $orgWhere = ($organizationId && $organizationId > 0) ? " WHERE s.organization_id = {$organizationId}" : "";
         $totalSql = "SELECT COUNT(*) AS cnt FROM subscriptions s LEFT JOIN subscription_payments sp ON sp.subscription_id = s.id LEFT JOIN organizations o ON s.organization_id = o.id{$orgWhere}";
         $totalRow = $this->db->selectOne($totalSql);
         $totalRecords = (int)($totalRow['cnt'] ?? 0);
@@ -149,9 +147,7 @@ class SubscriptionPaymentRepository {
         $params = [$paymentId, $paymentId];
         $whereOrg = "";
         if ($organizationId !== null && $organizationId > 0) {
-            $whereOrg = " AND (s.organization_id = ? OR o.id = ? OR o.owner_id = ?)";
-            $params[] = $organizationId;
-            $params[] = $organizationId;
+            $whereOrg = " AND s.organization_id = ?";
             $params[] = $organizationId;
         }
 

@@ -18,6 +18,8 @@ if ($request->getMethod() === 'POST') {
         $controller->adjustStock($request);
     } elseif ($action === 'sell') {
         $controller->processSale($request);
+    } elseif ($action === 'return_rental') {
+        $controller->returnRental($request);
     } else {
         $controller->createProduct($request);
     }

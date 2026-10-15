@@ -6,6 +6,7 @@ use App\Infrastructure\Repositories\FacilityRepository;
 
 Auth::requirePermission('amenities.view');
 $canManage = Auth::can('amenities.manage');
+$canEditDefinitions = Auth::hasRole('super_admin', 'platform_admin');
 
 $facilityRepo = new FacilityRepository();
 $role = Auth::role();
@@ -20,7 +21,7 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
 }
 ?>
 <!doctype html>
-<html lang="en">
+<html lang="en" <?= \App\Core\View\PortalTheme::attributes() ?>>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -145,6 +146,7 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
     }
   </style>
 <?php require_once __DIR__ . '/../../includes/subscription-gate.php'; ?>
+  <?php require_once __DIR__ . '/../../includes/portal-theme-assets.php'; ?>
 </head>
 <body>
 
@@ -274,6 +276,7 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
     let amenitiesDataTable = null;
     let allAmenitiesList = [];
     const canManage = <?= json_encode($canManage) ?>;
+    const canEditDefinitions = <?= json_encode($canEditDefinitions) ?>;
 
     document.addEventListener('DOMContentLoaded', async () => {
       await NavbarComponent.render('#navbar-container', true);
@@ -332,7 +335,7 @@ if ($role === 'super_admin' || $role === 'platform_admin') {
             data: null,
             orderable: false,
             render: function (data, type, row) {
-              if (!canManage) return `<span style="color:#aaa;">Read Only</span>`;
+              if (!canEditDefinitions) return `<span style="color:#aaa;">Shared amenity</span>`;
               return `
                 <div style="display:flex; gap:6px; justify-content:flex-end;">
                   <button type="button" onclick="openEditAmenityModal(${row.id}, '${escapeJsStr(row.name)}', '${escapeJsStr(row.icon)}')" class="button sand" style="padding:4px 10px; font-size:0.75rem;" title="Edit Amenity">

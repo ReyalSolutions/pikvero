@@ -22,7 +22,7 @@ if (!$canExport) {
 
 $search = trim($_GET['search'] ?? '');
 $status = trim($_GET['status'] ?? 'all');
-$tenantOrgId = in_array($role, ['super_admin', 'platform_admin']) ? 0 : (int)($user['organization_id'] ?? 0);
+$tenantOrgId = in_array($role, ['super_admin', 'platform_admin']) ? 0 : \App\Core\Auth\TenantScope::requireOrganization();
 
 $bookingRepo = new BookingRepository();
 $result = $bookingRepo->getPaginatedBookings($tenantOrgId, 1, 1000, $search, $status);

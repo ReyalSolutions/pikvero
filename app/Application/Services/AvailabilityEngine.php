@@ -22,14 +22,11 @@ class AvailabilityEngine {
         }
 
         $dayOfWeek = (int)date('w', strtotime($date));
-        // 0=Sun,1=Mon,...,6=Sat → determine day_type
-        $isWeekend  = in_array($dayOfWeek, [0, 6]);
-        $dayType    = $isWeekend ? 'weekend' : 'weekday';
 
         $db = Connection::getInstance();
-        $opHours = $db->selectOne("SELECT open_time, close_time FROM court_operating_hours WHERE court_id = ? AND day_of_week = ?", [$courtId, $dayOfWeek], 'ii');
+        $opHours = $this->operatingHours($courtId, $dayOfWeek);
 
-        // Missing hours mean closed; never invent bookable hours for a closed day.
+        // A missing day in a configured weekly schedule means closed.
         if (!$opHours || $opHours['open_time'] >= $opHours['close_time']) {
             return [];
         }
@@ -45,7 +42,7 @@ class AvailabilityEngine {
                 AND is_active = 1
               ORDER BY
                 CASE WHEN day_of_week IS NOT NULL THEN 0 ELSE 1 END ASC,
-                start_time ASC",
+                start_time ASC, id ASC",
             [$courtId], 'i'
         );
 
@@ -64,24 +61,7 @@ class AvailabilityEngine {
 
             // --- Determine price for this slot ---
             $slotPrice = (float)$court['base_price_per_hour'];
-            foreach ($pricingRules as $rule) {
-                // Time range must overlap the slot
-                if ($rule['start_time'] >= $slotEnd || $rule['end_time'] <= $slotStart) {
-                    continue;
-                }
-                // Day-of-week filter (NULL means all days)
-                if ($rule['day_of_week'] !== null && (int)$rule['day_of_week'] !== $dayOfWeek) {
-                    continue;
-                }
-                // Day-type filter ('all', 'weekday', 'weekend')
-                $ruleType = strtolower($rule['day_type'] ?? 'all');
-                if ($ruleType !== 'all' && $ruleType !== $dayType) {
-                    continue;
-                }
-                // First matching rule wins (already ordered by specificity)
-                $slotPrice = (float)$rule['price_per_hour'];
-                break;
-            }
+            $slotPrice = CourtPricing::calculate($date, $slotStart, $slotEnd, $slotPrice, $pricingRules);
 
             // --- Availability checks ---
             $isBooked = false;
@@ -146,10 +126,7 @@ class AvailabilityEngine {
         if (new \DateTimeImmutable($date . ' ' . $startTime, $now->getTimezone()) <= $now) {
             throw new Exception('This start time has already passed. Please select a future time slot.');
         }
-        $hours = Connection::getInstance()->selectOne(
-            'SELECT open_time, close_time FROM court_operating_hours WHERE court_id = ? AND day_of_week = ?',
-            [$courtId, (int)date('w', strtotime($date))], 'ii'
-        );
+        $hours = $this->operatingHours($courtId, (int)date('w', strtotime($date)));
         if (!$hours || $hours['open_time'] >= $hours['close_time'] ||
             $start < strtotime($date . ' ' . $hours['open_time']) ||
             $end > strtotime($date . ' ' . $hours['close_time'])) {
@@ -175,6 +152,15 @@ class AvailabilityEngine {
         }
     }
 
+    private function operatingHours(int $courtId, int $day): ?array {
+        $rows = $this->courtRepo->getOperatingHours($courtId);
+        // Legacy courts have never configured hours: retain the original default.
+        if (!$rows) return ['open_time' => '06:00:00', 'close_time' => '22:00:00'];
+        foreach ($rows as $row) {
+            if ((int)$row['day_of_week'] === $day) return $row;
+        }
+        return null;
+    }
     /** Convert a 24-hour integer hour to 12-hour AM/PM display string. */
     private function to12h(int $h): string {
         $h = $h % 24;

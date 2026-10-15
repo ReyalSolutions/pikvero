@@ -34,8 +34,8 @@ class BookingService {
         $endTs = strtotime("{$date} {$endTime}");
         $durationHours = max(1.0, round(($endTs - $startTs) / 3600.0, 2));
 
-        $ratePerHour = (float)$court['base_price_per_hour'];
-        $totalAmount = round($durationHours * $ratePerHour, 2);
+        $totalAmount = (new CourtPricing())->quote($courtId, $date, $startTime, $endTime, (float)$court['base_price_per_hour']);
+        $ratePerHour = round($totalAmount / $durationHours, 2);
 
         // Generate Reference Code
         $refCode = 'PB-' . date('Ymd', strtotime($date)) . '-' . sprintf('%04d', rand(1, 9999));

@@ -1113,7 +1113,7 @@
           });
 
           var html = $.map(slots, function(slot) {
-            var price = parseFloat(slot.price || slot.price_per_hour || 350).toFixed(2);
+            var price = Number(slot.price ?? slot.price_per_hour ?? 0).toFixed(2);
             var rawStart = String(slot.start_time).substring(0, 5);
             var rawEnd   = String(slot.end_time).substring(0, 5);
             var displayStart = slot.display_start || formatTime12h(rawStart);
